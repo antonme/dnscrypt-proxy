@@ -97,7 +97,9 @@ func (plugin *PluginCache) Eval(pluginsState *PluginsState, msg *dns.Msg) error 
 		pluginsState.expiredCache=true;
 	}
 
-	updateTTL(&cached.msg, cached.expiration)
+	if time.Now().Before(cached.expiration) {
+		updateTTL(&cached.msg, cached.expiration)
+	}
 
 	pluginsState.synthResponse = &synth
 	pluginsState.action = PluginsActionSynth
