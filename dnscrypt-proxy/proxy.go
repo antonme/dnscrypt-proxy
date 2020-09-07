@@ -279,7 +279,7 @@ func (proxy *Proxy) udpListener(clientPc *net.UDPConn) {
 				return
 			}
 			defer proxy.clientsCountDec()
-			proxy.processIncomingQuery("udp", proxy.mainProto, packet, &clientAddr, clientPc, start)
+			proxy.processIncomingQuery("udp", proxy.mainProto, packet, &clientAddr, clientPc, start,false)
 		}()
 	}
 }
@@ -317,7 +317,7 @@ func (proxy *Proxy) tcpListener(acceptPc *net.TCPListener) {
 				return
 			}
 			clientAddr := clientPc.RemoteAddr()
-			proxy.processIncomingQuery("tcp", "tcp", packet, &clientAddr, clientPc, start)
+			proxy.processIncomingQuery("tcp", "tcp", packet, &clientAddr, clientPc, start,false)
 		}()
 	}
 }
@@ -463,11 +463,12 @@ func (proxy *Proxy) clientsCountDec() {
 	}
 }
 
-func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string, query []byte, clientAddr *net.Addr, clientPc net.Conn, start time.Time) (response []byte) {
+func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string, query []byte, clientAddr *net.Addr, clientPc net.Conn, start time.Time, forceRequest bool) (response []byte) {
 	if len(query) < MinDNSPacketSize {
 		return
 	}
 	pluginsState := NewPluginsState(proxy, clientProto, clientAddr, serverProto, start)
+	pluginsState.expiredCache=forceRequest
 	serverName := "-"
 	needsEDNS0Padding := false
 	serverInfo := proxy.serversInfo.getOne()
@@ -485,7 +486,7 @@ func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string,
 		return
 	}
 	var err error
-	if pluginsState.synthResponse != nil {
+	if pluginsState.synthResponse != nil && !forceRequest {
 		response, err = pluginsState.synthResponse.PackBuffer(response)
 		if err != nil {
 			pluginsState.returnCode = PluginsReturnCodeParseError
@@ -647,6 +648,9 @@ func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string,
 		if clientPc != nil {
 			clientPc.Write(response)
 		}
+	}
+	if pluginsState.expiredCache {
+		proxy.processIncomingQuery(clientProto,serverProto,query,clientAddr,clientPc,time.Now(),true)
 	}
 	pluginsState.ApplyLoggingPlugins(&proxy.pluginsGlobals)
 

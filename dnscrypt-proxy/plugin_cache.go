@@ -85,9 +85,16 @@ func (plugin *PluginCache) Eval(pluginsState *PluginsState, msg *dns.Msg) error 
 	synth.Compress = true
 	synth.Question = msg.Question
 
+//	if time.Now().After(cached.expiration) {
+//		pluginsState.sessionData["stale"] = &synth
+//		return nil
+//	}
+	if time.Now().After(cached.expiration) && pluginsState.expiredCache {
+		pluginsState.expiredCache=false;
+		return nil;
+	}
 	if time.Now().After(cached.expiration) {
-		pluginsState.sessionData["stale"] = &synth
-		return nil
+		pluginsState.expiredCache=true;
 	}
 
 	updateTTL(&cached.msg, cached.expiration)

@@ -64,6 +64,7 @@ var PluginsReturnCodeToString = map[PluginsReturnCode]string{
 }
 
 type PluginsState struct {
+	expiredCache					 bool
 	sessionData                      map[string]interface{}
 	action                           PluginsAction
 	maxUnencryptedUDPSafePayloadSize int
@@ -248,6 +249,7 @@ func NewPluginsState(proxy *Proxy, clientProto string, clientAddr *net.Addr, ser
 		requestStart:                     start,
 		maxUnencryptedUDPSafePayloadSize: MaxDNSUDPSafePacketSize,
 		sessionData:                      make(map[string]interface{}),
+		expiredCache: 					  false,
 	}
 }
 
