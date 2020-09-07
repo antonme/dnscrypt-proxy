@@ -15,4 +15,5 @@ dnscrypt-proxy/*-resolvers.md*
 relays.md*
 vendor/pkg
 dnscrypt-proxy.toml
+*public.md*
 .idea

@@ -90,14 +90,14 @@ func (plugin *PluginCache) Eval(pluginsState *PluginsState, msg *dns.Msg) error 
 //		return nil
 //	}
 	if time.Now().After(cached.expiration) && pluginsState.expiredCache {
-		pluginsState.expiredCache=false;
-		return nil;
+		pluginsState.expiredCache=false
+		return nil
 	}
 	if time.Now().After(cached.expiration) {
-		pluginsState.expiredCache=true;
+		pluginsState.expiredCache=true
 	}
 
-	if time.Now().Before(cached.expiration) {
+	if time.Now().Before(cached.expiration.Add(-3*time.Second)) {
 		updateTTL(&cached.msg, cached.expiration)
 	}
 
