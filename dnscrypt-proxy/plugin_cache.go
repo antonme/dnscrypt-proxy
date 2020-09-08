@@ -93,7 +93,7 @@ func (plugin *PluginCache) Eval(pluginsState *PluginsState, msg *dns.Msg) error 
 		pluginsState.expiredCache=false
 		return nil
 	}
-	if time.Now().After(cached.expiration.Add(-3*time.Second)) {
+	if time.Now().After(cached.expiration.Add(-1*time.Second)) {
 		pluginsState.expiredCache=true
 	}
 
