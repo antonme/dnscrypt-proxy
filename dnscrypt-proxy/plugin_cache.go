@@ -89,15 +89,15 @@ func (plugin *PluginCache) Eval(pluginsState *PluginsState, msg *dns.Msg) error 
 //		pluginsState.sessionData["stale"] = &synth
 //		return nil
 //	}
-	if time.Now().After(cached.expiration) && pluginsState.expiredCache {
+	if pluginsState.expiredCache {
 		pluginsState.expiredCache=false
 		return nil
 	}
-	if time.Now().After(cached.expiration) {
+	if time.Now().After(cached.expiration.Add(-3*time.Second)) {
 		pluginsState.expiredCache=true
 	}
 
-	if time.Now().Before(cached.expiration.Add(-3*time.Second)) {
+	if time.Now().Before(cached.expiration) {
 		updateTTL(&cached.msg, cached.expiration)
 	}
 
