@@ -649,10 +649,10 @@ func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string,
 			clientPc.Write(response)
 		}
 	}
+	pluginsState.ApplyLoggingPlugins(&proxy.pluginsGlobals)
 	if pluginsState.expiredCache {
 		proxy.processIncomingQuery(clientProto,serverProto,query,clientAddr,clientPc,time.Now(),true)
 	}
-	pluginsState.ApplyLoggingPlugins(&proxy.pluginsGlobals)
 
 	return response
 }
