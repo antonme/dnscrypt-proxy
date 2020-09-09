@@ -3,10 +3,10 @@ package main
 import (
 	crypto_rand "crypto/rand"
 	"encoding/binary"
-	"math/rand"
 	"net"
 	"os"
 	"runtime"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -15,7 +15,13 @@ import (
 	stamps "github.com/jedisct1/go-dnsstamps"
 	"github.com/miekg/dns"
 	"golang.org/x/crypto/curve25519"
+	"hash/fnv"
 )
+
+type PrefetchQueue struct {
+	sync.RWMutex
+	queue map[uint32]bool
+}
 
 type Proxy struct {
 	udpListeners                   []*net.UDPConn
@@ -88,6 +94,13 @@ type Proxy struct {
 	anonDirectCertFallback         bool
 	dns64Prefixes                  []string
 	dns64Resolvers                 []string
+	queueLock                      PrefetchQueue
+}
+
+func hash(s string) uint32 {
+	h := fnv.New32a()
+	h.Write([]byte(s))
+	return h.Sum32()
 }
 
 func (proxy *Proxy) registerUDPListener(conn *net.UDPConn) {
@@ -222,6 +235,7 @@ func (proxy *Proxy) StartProxy() {
 		proxy.serversInfo.registerServer(registeredServer.name, registeredServer.stamp)
 	}
 	proxy.startAcceptingClients()
+	proxy.queueLock.queue = make(map[uint32]bool)
 	liveServers, err := proxy.serversInfo.refresh(proxy)
 	if liveServers > 0 {
 		proxy.certIgnoreTimestamp = false
@@ -487,7 +501,7 @@ func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string,
 		return
 	}
 	var err error
-	if pluginsState.synthResponse != nil && !forceRequest {
+	if pluginsState.synthResponse != nil {
 		response, err = pluginsState.synthResponse.PackBuffer(response)
 		if err != nil {
 			pluginsState.returnCode = PluginsReturnCodeParseError
@@ -653,10 +667,28 @@ func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string,
 
 	pluginsState.ApplyLoggingPlugins(&proxy.pluginsGlobals)
 
-	if pluginsState.cacheExpired {
-		sleeptime:=time.Duration(rand.Intn(200))*time.Millisecond
-		time.Sleep(sleeptime)
-		proxy.processIncomingQuery(clientProto, serverProto, query, clientAddr, clientPc, time.Now(), true)
+	if pluginsState.cacheExpired && pluginsState.action != PluginsActionPrefetch {
+		//	sleeptime:=time.Duration(rand.Intn(1000))*time.Millisecond
+		//	time.Sleep(sleeptime)
+		msg := dns.Msg{}
+		msg.Unpack(query)
+		qName, _ := NormalizeQName(msg.Question[0].Name)
+		var qHash uint32 = hash(qName)
+		proxy.queueLock.RLock()
+		aha := !proxy.queueLock.queue[qHash]
+		proxy.queueLock.RUnlock()
+		if aha {
+			proxy.queueLock.Lock()
+			proxy.queueLock.queue[qHash] = true
+			proxy.queueLock.Unlock()
+
+			proxy.processIncomingQuery("none", "none", query, clientAddr, clientPc, start, true)
+
+			proxy.queueLock.Lock()
+			proxy.queueLock.queue[qHash] = false
+			proxy.queueLock.Unlock()
+
+		}
 	}
 
 	return response

@@ -89,10 +89,12 @@ func (plugin *PluginCache) Eval(pluginsState *PluginsState, msg *dns.Msg) error 
 	//		pluginsState.sessionData["stale"] = &synth
 	//		return nil
 	//	}
-	if pluginsState.cacheExpired{
-		pluginsState.cacheExpired = false
+	if pluginsState.cacheExpired {
 		if time.Now().After(cached.expiration.Add(-1 * time.Second)) {
 			pluginsState.action = PluginsActionPrefetch
+			return nil
+		} else {
+			pluginsState.action = PluginsActionDrop
 			return nil
 		}
 	}
@@ -147,6 +149,7 @@ func (plugin *PluginCacheResponse) Eval(pluginsState *PluginsState, msg *dns.Msg
 	cacheKey := computeCacheKey(pluginsState, msg)
 	ttl := getMinTTL(msg, pluginsState.cacheMinTTL, pluginsState.cacheMaxTTL, pluginsState.cacheNegMinTTL, pluginsState.cacheNegMaxTTL)
 	pluginsState.cachedTTL = ttl
+	ttl = 3 * time.Second
 	cachedResponse := CachedResponse{
 		expiration: time.Now().Add(ttl),
 		msg:        *msg,

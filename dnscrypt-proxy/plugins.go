@@ -286,7 +286,7 @@ func (pluginsState *PluginsState) ApplyQueryPlugins(pluginsGlobals *PluginsGloba
 			synth := RefusedResponseFromMessage(&msg, pluginsGlobals.refusedCodeInResponses, pluginsGlobals.respondWithIPv4, pluginsGlobals.respondWithIPv6, pluginsState.rejectTTL)
 			pluginsState.synthResponse = synth
 		}
-		if pluginsState.action != PluginsActionContinue {
+		if pluginsState.action != PluginsActionContinue && pluginsState.action != PluginsActionPrefetch {
 			break
 		}
 	}

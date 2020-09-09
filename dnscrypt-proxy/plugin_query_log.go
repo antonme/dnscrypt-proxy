@@ -58,7 +58,7 @@ func (plugin *PluginQueryLog) Eval(pluginsState *PluginsState, msg *dns.Msg) err
 	var clientIPStr string
 	if pluginsState.clientProto == "udp" {
 		clientIPStr = (*pluginsState.clientAddr).(*net.UDPAddr).IP.String()
-	} else {
+	} else if pluginsState.clientProto == "tcp" {
 		clientIPStr = (*pluginsState.clientAddr).(*net.TCPAddr).IP.String()
 	}
 	qName := pluginsState.qName
@@ -69,8 +69,8 @@ func (plugin *PluginQueryLog) Eval(pluginsState *PluginsState, msg *dns.Msg) err
 		switch pluginsState.returnCode {
 		case PluginsReturnCodeSynth, PluginsReturnCodeCloak, PluginsReturnCodeParseError:
 			pluginsState.serverName = "-"
-	//	case PluginsReturnCodePrefetch:
-	//		clientIPStr = "-"
+		case PluginsReturnCodePrefetch:
+			clientIPStr = "-"
 		}
 
 	}
@@ -84,15 +84,19 @@ func (plugin *PluginQueryLog) Eval(pluginsState *PluginsState, msg *dns.Msg) err
 	if !pluginsState.requestStart.IsZero() && !pluginsState.requestEnd.IsZero() {
 		requestDuration = pluginsState.requestEnd.Sub(pluginsState.requestStart)
 	}
+	if pluginsState.action == PluginsActionDrop && pluginsState.cacheExpired {
+		//		return nil
+		clientIPStr = "-"
+	}
 	var line string
 	if plugin.format == "tsv" {
 		now := time.Now()
 		year, month, day := now.Date()
 		hour, minute, second := now.Clock()
-		ttl := pluginsState.cachedTTL/time.Second
+		ttl := pluginsState.cachedTTL / time.Second
 		tsStr := fmt.Sprintf("[%d-%02d-%02d %02d:%02d:%02d]", year, int(month), day, hour, minute, second)
 		line = fmt.Sprintf("%s\t%s\t%s\t%s\t%s\t%dms\t%d\t%s\n", tsStr, clientIPStr, StringQuote(qName), qType, returnCode, requestDuration/time.Millisecond,
-			ttl,StringQuote(pluginsState.serverName))
+			ttl, StringQuote(pluginsState.serverName))
 	} else if plugin.format == "ltsv" {
 		cached := 0
 		if pluginsState.cacheHit {
