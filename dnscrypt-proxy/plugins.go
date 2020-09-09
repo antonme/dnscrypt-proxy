@@ -19,6 +19,7 @@ const (
 	PluginsActionDrop     = 2
 	PluginsActionReject   = 3
 	PluginsActionSynth    = 4
+	PluginsActionPrefetch = 5
 )
 
 type PluginsGlobals struct {
@@ -46,6 +47,7 @@ const (
 	PluginsReturnCodeNetworkError
 	PluginsReturnCodeCloak
 	PluginsReturnCodeServerTimeout
+	PluginsReturnCodePrefetch
 )
 
 var PluginsReturnCodeToString = map[PluginsReturnCode]string{
@@ -61,10 +63,10 @@ var PluginsReturnCodeToString = map[PluginsReturnCode]string{
 	PluginsReturnCodeNetworkError:  "NETWORK_ERROR",
 	PluginsReturnCodeCloak:         "CLOAK",
 	PluginsReturnCodeServerTimeout: "SERVER_TIMEOUT",
+	PluginsReturnCodePrefetch:      "PREFETCH",
 }
 
 type PluginsState struct {
-	expiredCache					 bool
 	sessionData                      map[string]interface{}
 	action                           PluginsAction
 	maxUnencryptedUDPSafePayloadSize int
@@ -81,10 +83,12 @@ type PluginsState struct {
 	cacheMaxTTL                      uint32
 	rejectTTL                        uint32
 	questionMsg                      *dns.Msg
+	cachedTTL                        time.Duration
 	qName                            string
 	requestStart                     time.Time
 	requestEnd                       time.Time
 	cacheHit                         bool
+	cacheExpired                     bool
 	returnCode                       PluginsReturnCode
 	serverName                       string
 	serverProto                      string
@@ -249,7 +253,7 @@ func NewPluginsState(proxy *Proxy, clientProto string, clientAddr *net.Addr, ser
 		requestStart:                     start,
 		maxUnencryptedUDPSafePayloadSize: MaxDNSUDPSafePacketSize,
 		sessionData:                      make(map[string]interface{}),
-		expiredCache: 					  false,
+		cacheExpired:                     false,
 	}
 }
 

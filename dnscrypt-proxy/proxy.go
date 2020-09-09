@@ -279,7 +279,7 @@ func (proxy *Proxy) udpListener(clientPc *net.UDPConn) {
 				return
 			}
 			defer proxy.clientsCountDec()
-			proxy.processIncomingQuery("udp", proxy.mainProto, packet, &clientAddr, clientPc, start,false)
+			proxy.processIncomingQuery("udp", proxy.mainProto, packet, &clientAddr, clientPc, start, false)
 		}()
 	}
 }
@@ -317,7 +317,7 @@ func (proxy *Proxy) tcpListener(acceptPc *net.TCPListener) {
 				return
 			}
 			clientAddr := clientPc.RemoteAddr()
-			proxy.processIncomingQuery("tcp", "tcp", packet, &clientAddr, clientPc, start,false)
+			proxy.processIncomingQuery("tcp", "tcp", packet, &clientAddr, clientPc, start, false)
 		}()
 	}
 }
@@ -468,7 +468,7 @@ func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string,
 		return
 	}
 	pluginsState := NewPluginsState(proxy, clientProto, clientAddr, serverProto, start)
-	pluginsState.expiredCache=forceRequest
+	pluginsState.cacheExpired = forceRequest
 	serverName := "-"
 	needsEDNS0Padding := false
 	serverInfo := proxy.serversInfo.getOne()
@@ -649,9 +649,11 @@ func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string,
 			clientPc.Write(response)
 		}
 	}
+
 	pluginsState.ApplyLoggingPlugins(&proxy.pluginsGlobals)
-	if pluginsState.expiredCache {
-		proxy.processIncomingQuery(clientProto,serverProto,query,clientAddr,clientPc,time.Now(),true)
+
+	if pluginsState.cacheExpired {
+		proxy.processIncomingQuery(clientProto, serverProto, query, clientAddr, clientPc, time.Now(), true)
 	}
 
 	return response
