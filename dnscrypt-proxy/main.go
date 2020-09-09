@@ -5,13 +5,12 @@ import (
 	"encoding/binary"
 	"flag"
 	"fmt"
+	"github.com/jedisct1/dlog"
+	"github.com/kardianos/service"
 	"math/rand"
 	"os"
 	"runtime"
 	"sync"
-
-	"github.com/jedisct1/dlog"
-	"github.com/kardianos/service"
 )
 
 const (

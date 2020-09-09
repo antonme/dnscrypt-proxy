@@ -3,6 +3,7 @@ package main
 import (
 	crypto_rand "crypto/rand"
 	"encoding/binary"
+	"math/rand"
 	"net"
 	"os"
 	"runtime"
@@ -653,6 +654,8 @@ func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string,
 	pluginsState.ApplyLoggingPlugins(&proxy.pluginsGlobals)
 
 	if pluginsState.cacheExpired {
+		sleeptime:=time.Duration(rand.Intn(200))*time.Millisecond
+		time.Sleep(sleeptime)
 		proxy.processIncomingQuery(clientProto, serverProto, query, clientAddr, clientPc, time.Now(), true)
 	}
 

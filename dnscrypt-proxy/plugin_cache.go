@@ -89,10 +89,12 @@ func (plugin *PluginCache) Eval(pluginsState *PluginsState, msg *dns.Msg) error 
 	//		pluginsState.sessionData["stale"] = &synth
 	//		return nil
 	//	}
-	if pluginsState.cacheExpired {
+	if pluginsState.cacheExpired{
 		pluginsState.cacheExpired = false
-		pluginsState.action = PluginsActionPrefetch
-		return nil
+		if time.Now().After(cached.expiration.Add(-1 * time.Second)) {
+			pluginsState.action = PluginsActionPrefetch
+			return nil
+		}
 	}
 	if time.Now().After(cached.expiration.Add(-1 * time.Second)) {
 		pluginsState.cacheExpired = true
