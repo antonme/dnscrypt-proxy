@@ -104,7 +104,7 @@ func (plugin *PluginCache) Eval(pluginsState *PluginsState, msg *dns.Msg) error 
 	}
 
 	pluginsState.synthResponse = &synth
-	pluginsState.action = PluginsReturnCodeCacheHit
+	pluginsState.action = PluginsReturnCodeSynth
 	pluginsState.cacheHit = true
 	pluginsState.cachedTTL = cached.expiration.Sub(time.Now())
 

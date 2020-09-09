@@ -55,7 +55,7 @@ func (plugin *PluginQueryLog) Eval(pluginsState *PluginsState, msg *dns.Msg) err
 			}
 		}
 	}
-	var clientIPStr string
+	var clientIPStr string = "-"
 	if pluginsState.clientProto == "udp" {
 		clientIPStr = (*pluginsState.clientAddr).(*net.UDPAddr).IP.String()
 	} else if pluginsState.clientProto == "tcp" {
@@ -65,6 +65,7 @@ func (plugin *PluginQueryLog) Eval(pluginsState *PluginsState, msg *dns.Msg) err
 
 	if pluginsState.cacheHit {
 		pluginsState.serverName = "-"
+		pluginsState.returnCode = PluginsReturnCodeCacheHit
 	} else {
 		switch pluginsState.returnCode {
 		case PluginsReturnCodeSynth, PluginsReturnCodeCloak, PluginsReturnCodeParseError:

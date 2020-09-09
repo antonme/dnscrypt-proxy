@@ -65,6 +65,7 @@ var PluginsReturnCodeToString = map[PluginsReturnCode]string{
 	PluginsReturnCodeCloak:         "CLOAK",
 	PluginsReturnCodeServerTimeout: "SERVER_TIMEOUT",
 	PluginsReturnCodePrefetch:      "PREFETCH",
+	PluginsReturnCodeCacheHit:      "CACHE_HIT",
 }
 
 type PluginsState struct {
