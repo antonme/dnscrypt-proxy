@@ -93,9 +93,6 @@ func (plugin *PluginCache) Eval(pluginsState *PluginsState, msg *dns.Msg) error 
 		if time.Now().After(cached.expiration.Add(-1 * time.Second)) {
 			pluginsState.action = PluginsActionPrefetch
 			return nil
-		} else {
-			pluginsState.action = PluginsActionDrop
-			return nil
 		}
 	}
 	if time.Now().After(cached.expiration.Add(-1 * time.Second)) {
@@ -107,7 +104,7 @@ func (plugin *PluginCache) Eval(pluginsState *PluginsState, msg *dns.Msg) error 
 	}
 
 	pluginsState.synthResponse = &synth
-	pluginsState.action = PluginsActionSynth
+	pluginsState.action = PluginsReturnCodeCacheHit
 	pluginsState.cacheHit = true
 	pluginsState.cachedTTL = cached.expiration.Sub(time.Now())
 

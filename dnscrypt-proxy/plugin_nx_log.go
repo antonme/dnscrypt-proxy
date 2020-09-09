@@ -48,10 +48,10 @@ func (plugin *PluginNxLog) Eval(pluginsState *PluginsState, msg *dns.Msg) error 
 	if !ok {
 		qType = string(qType)
 	}
-	var clientIPStr string
+	var clientIPStr string = "-"
 	if pluginsState.clientProto == "udp" {
 		clientIPStr = (*pluginsState.clientAddr).(*net.UDPAddr).IP.String()
-	} else {
+	} else if pluginsState.clientProto == "tcp" {
 		clientIPStr = (*pluginsState.clientAddr).(*net.TCPAddr).IP.String()
 	}
 	qName := pluginsState.qName

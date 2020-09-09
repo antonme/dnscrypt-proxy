@@ -48,6 +48,7 @@ const (
 	PluginsReturnCodeCloak
 	PluginsReturnCodeServerTimeout
 	PluginsReturnCodePrefetch
+	PluginsReturnCodeCacheHit
 )
 
 var PluginsReturnCodeToString = map[PluginsReturnCode]string{
