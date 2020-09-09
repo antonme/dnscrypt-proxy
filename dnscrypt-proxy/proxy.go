@@ -663,6 +663,13 @@ func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string,
 		if clientPc != nil {
 			clientPc.Write(response)
 		}
+	} else {
+		pluginsState.returnCode = PluginsReturnCodePrefetch
+		pluginsState.ApplyLoggingPlugins(&proxy.pluginsGlobals)
+		if serverInfo != nil {
+			serverInfo.noticeFailure(proxy)
+		}
+		return
 	}
 
 	pluginsState.ApplyLoggingPlugins(&proxy.pluginsGlobals)
