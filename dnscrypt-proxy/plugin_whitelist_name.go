@@ -96,10 +96,10 @@ func (plugin *PluginWhitelistName) Eval(pluginsState *PluginsState, msg *dns.Msg
 	if whitelist {
 		pluginsState.sessionData["whitelisted"] = true
 		if plugin.logger != nil {
-			var clientIPStr string
+			var clientIPStr string = "-"
 			if pluginsState.clientProto == "udp" {
 				clientIPStr = (*pluginsState.clientAddr).(*net.UDPAddr).IP.String()
-			} else {
+			} else if pluginsState.clientProto == "tcp" {
 				clientIPStr = (*pluginsState.clientAddr).(*net.TCPAddr).IP.String()
 			}
 			var line string

@@ -44,10 +44,10 @@ func (blockedNames *BlockedNames) check(pluginsState *PluginsState, qName string
 	pluginsState.action = PluginsActionReject
 	pluginsState.returnCode = PluginsReturnCodeReject
 	if blockedNames.logger != nil {
-		var clientIPStr string
+		var clientIPStr string = "-"
 		if pluginsState.clientProto == "udp" {
 			clientIPStr = (*pluginsState.clientAddr).(*net.UDPAddr).IP.String()
-		} else {
+		} else if pluginsState.clientProto == "tcp" {
 			clientIPStr = (*pluginsState.clientAddr).(*net.TCPAddr).IP.String()
 		}
 		var line string

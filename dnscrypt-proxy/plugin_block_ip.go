@@ -122,10 +122,10 @@ func (plugin *PluginBlockIP) Eval(pluginsState *PluginsState, msg *dns.Msg) erro
 		pluginsState.returnCode = PluginsReturnCodeReject
 		if plugin.logger != nil {
 			qName := pluginsState.qName
-			var clientIPStr string
+			var clientIPStr string = "-"
 			if pluginsState.clientProto == "udp" {
 				clientIPStr = (*pluginsState.clientAddr).(*net.UDPAddr).IP.String()
-			} else {
+			} else if pluginsState.clientProto == "tcp" {
 				clientIPStr = (*pluginsState.clientAddr).(*net.TCPAddr).IP.String()
 			}
 			var line string
