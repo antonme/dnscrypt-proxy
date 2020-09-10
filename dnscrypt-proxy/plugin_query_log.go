@@ -48,6 +48,9 @@ func (plugin *PluginQueryLog) Eval(pluginsState *PluginsState, msg *dns.Msg) err
 	if !ok {
 		qType = string(qType)
 	}
+	if qType == "" {
+		qType = "-"
+	}
 	if len(plugin.ignoredQtypes) > 0 {
 		for _, ignoredQtype := range plugin.ignoredQtypes {
 			if strings.EqualFold(ignoredQtype, qType) {
