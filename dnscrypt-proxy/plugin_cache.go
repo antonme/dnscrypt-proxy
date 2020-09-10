@@ -85,16 +85,11 @@ func (plugin *PluginCache) Eval(pluginsState *PluginsState, msg *dns.Msg) error 
 	synth.Compress = true
 	synth.Question = msg.Question
 
-	//	if time.Now().After(cached.expiration) {
-	//		pluginsState.sessionData["stale"] = &synth
-	//		return nil
-	//	}
-	if pluginsState.cacheExpired {
-		if time.Now().After(cached.expiration.Add(-1 * time.Second)) {
-			pluginsState.action = PluginsActionPrefetch
-			return nil
-		}
+	if time.Now().After(cached.expiration.Add(-1 * time.Second)) && pluginsState.cacheExpired{
+		pluginsState.sessionData["stale"] = &synth
+		return nil
 	}
+
 	if time.Now().After(cached.expiration.Add(-1 * time.Second)) {
 		pluginsState.cacheExpired = true
 	}
@@ -145,7 +140,7 @@ func (plugin *PluginCacheResponse) Eval(pluginsState *PluginsState, msg *dns.Msg
 	}
 	cacheKey := computeCacheKey(pluginsState, msg)
 	ttl := getMinTTL(msg, pluginsState.cacheMinTTL, pluginsState.cacheMaxTTL, pluginsState.cacheNegMinTTL, pluginsState.cacheNegMaxTTL)
-	ttl = 20 * time.Second
+
 	pluginsState.cachedTTL = ttl
 	cachedResponse := CachedResponse{
 		expiration: time.Now().Add(ttl),
@@ -163,9 +158,9 @@ func (plugin *PluginCacheResponse) Eval(pluginsState *PluginsState, msg *dns.Msg
 	}
 	cachedResponses.cache.Add(cacheKey, cachedResponse)
 	cachedResponses.Unlock()
-	if pluginsState.action == PluginsActionPrefetch {
+	/*if pluginsState.action == PluginsActionPrefetch {
 		pluginsState.returnCode = PluginsReturnCodePrefetch
-	}
+	}*/
 	updateTTL(msg, cachedResponse.expiration)
 
 	return nil
