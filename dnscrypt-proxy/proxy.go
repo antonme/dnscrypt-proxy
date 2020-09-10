@@ -20,7 +20,7 @@ import (
 
 type PrefetchQueue struct {
 	sync.RWMutex
-	queue map[uint32]bool
+	queue map[[32]byte]bool
 }
 
 type Proxy struct {
@@ -235,7 +235,7 @@ func (proxy *Proxy) StartProxy() {
 		proxy.serversInfo.registerServer(registeredServer.name, registeredServer.stamp)
 	}
 	proxy.startAcceptingClients()
-	proxy.queueLock.queue = make(map[uint32]bool)
+	proxy.queueLock.queue = make(map[[32]byte]bool)
 	liveServers, err := proxy.serversInfo.refresh(proxy)
 	if liveServers > 0 {
 		proxy.certIgnoreTimestamp = false
@@ -676,8 +676,9 @@ func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string,
 		//	time.Sleep(sleeptime)
 		msg := dns.Msg{}
 		msg.Unpack(query)
-		qName, _ := NormalizeQName(msg.Question[0].Name)
-		var qHash uint32 = hash(qName)
+		//qName, _ := NormalizeQName(msg.Question[0].Name)
+		//var qHash uint32 = hash(qName)
+		var qHash = computeCacheKey(nil, &msg)
 		proxy.queueLock.RLock()
 		aha := !proxy.queueLock.queue[qHash]
 		proxy.queueLock.RUnlock()

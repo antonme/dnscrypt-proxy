@@ -28,10 +28,10 @@ func computeCacheKey(pluginsState *PluginsState, msg *dns.Msg) [32]byte {
 	var tmp [5]byte
 	binary.LittleEndian.PutUint16(tmp[0:2], question.Qtype)
 	binary.LittleEndian.PutUint16(tmp[2:4], question.Qclass)
-	if pluginsState.dnssec {
+	if pluginsState != nil && pluginsState.dnssec {
 		tmp[4] = 1
 	}
-	//h.Write(tmp[:])
+	h.Write(tmp[:])
 	normalizedRawQName := []byte(question.Name)
 	NormalizeRawQName(&normalizedRawQName)
 	h.Write(normalizedRawQName)
@@ -85,7 +85,7 @@ func (plugin *PluginCache) Eval(pluginsState *PluginsState, msg *dns.Msg) error 
 	synth.Compress = true
 	synth.Question = msg.Question
 
-	if time.Now().After(cached.expiration.Add(-1 * time.Second)) && pluginsState.cacheExpired{
+	if time.Now().After(cached.expiration.Add(-1*time.Second)) && pluginsState.cacheExpired {
 		pluginsState.sessionData["stale"] = &synth
 		return nil
 	}
