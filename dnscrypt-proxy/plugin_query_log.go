@@ -66,9 +66,12 @@ func (plugin *PluginQueryLog) Eval(pluginsState *PluginsState, msg *dns.Msg) err
 	}
 	qName := pluginsState.qName
 
-	if pluginsState.cacheHit {
+	if pluginsState.cacheHit && !pluginsState.cacheExpired {
 		pluginsState.serverName = "-"
 		pluginsState.returnCode = PluginsReturnCodeCacheHit
+	} else if pluginsState.cacheHit {
+		pluginsState.serverName = "-"
+		pluginsState.returnCode = PluginsReturnCodeExpiredCache
 	} else {
 		switch pluginsState.returnCode {
 		case PluginsReturnCodeSynth, PluginsReturnCodeCloak, PluginsReturnCodeParseError:

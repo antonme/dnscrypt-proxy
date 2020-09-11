@@ -49,6 +49,7 @@ const (
 	PluginsReturnCodeServerTimeout
 	PluginsReturnCodePrefetch
 	PluginsReturnCodeCacheHit
+	PluginsReturnCodeExpiredCache
 )
 
 var PluginsReturnCodeToString = map[PluginsReturnCode]string{
@@ -66,6 +67,7 @@ var PluginsReturnCodeToString = map[PluginsReturnCode]string{
 	PluginsReturnCodeServerTimeout: "SERVER_TIMEOUT",
 	PluginsReturnCodePrefetch:      "PREFETCH",
 	PluginsReturnCodeCacheHit:      "CACHE_HIT",
+	PluginsReturnCodeExpiredCache:  "FORCED_CACHE",
 }
 
 type PluginsState struct {
