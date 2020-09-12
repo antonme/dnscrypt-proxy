@@ -664,7 +664,7 @@ func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string,
 			clientPc.Write(response)
 		}
 	} else {
-		pluginsState.returnCode = PluginsReturnCodePrefetch
+		pluginsState.returnCode = PluginsReturnCodePostfetch
 		pluginsState.ApplyLoggingPlugins(&proxy.pluginsGlobals)
 		return
 	}

@@ -159,7 +159,7 @@ func (plugin *PluginCacheResponse) Eval(pluginsState *PluginsState, msg *dns.Msg
 	cachedResponses.cache.Add(cacheKey, cachedResponse)
 	cachedResponses.Unlock()
 	/*if pluginsState.action == PluginsActionPrefetch {
-		pluginsState.returnCode = PluginsReturnCodePrefetch
+		pluginsState.returnCode = PluginsReturnCodePostfetch
 	}*/
 	updateTTL(msg, cachedResponse.expiration)
 

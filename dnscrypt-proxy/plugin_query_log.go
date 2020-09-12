@@ -71,12 +71,12 @@ func (plugin *PluginQueryLog) Eval(pluginsState *PluginsState, msg *dns.Msg) err
 		pluginsState.returnCode = PluginsReturnCodeCacheHit
 	} else if pluginsState.cacheHit {
 		pluginsState.serverName = "-"
-		pluginsState.returnCode = PluginsReturnCodeExpiredCache
+		pluginsState.returnCode = PluginsReturnCodeForcedCache
 	} else {
 		switch pluginsState.returnCode {
 		case PluginsReturnCodeSynth, PluginsReturnCodeCloak, PluginsReturnCodeParseError:
 			pluginsState.serverName = "-"
-		case PluginsReturnCodePrefetch:
+		case PluginsReturnCodePostfetch:
 			clientIPStr = "-"
 		}
 
@@ -100,8 +100,9 @@ func (plugin *PluginQueryLog) Eval(pluginsState *PluginsState, msg *dns.Msg) err
 		now := time.Now()
 		year, month, day := now.Date()
 		hour, minute, second := now.Clock()
+		millis := time.Now().Nanosecond() / 1000000
 		ttl := pluginsState.cachedTTL / time.Second
-		tsStr := fmt.Sprintf("[%d-%02d-%02d %02d:%02d:%02d]", year, int(month), day, hour, minute, second)
+		tsStr := fmt.Sprintf("[%d-%02d-%02d %02d:%02d:%02d.%003d]", year, int(month), day, hour, minute, second, millis)
 		line = fmt.Sprintf("%s\t%s\t%s\t%s\t%s\t%dms\t%d\t%s\n", tsStr, clientIPStr, StringQuote(qName), qType, returnCode, requestDuration/time.Millisecond,
 			ttl, StringQuote(pluginsState.serverName))
 	} else if plugin.format == "ltsv" {

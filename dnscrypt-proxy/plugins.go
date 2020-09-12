@@ -47,9 +47,9 @@ const (
 	PluginsReturnCodeNetworkError
 	PluginsReturnCodeCloak
 	PluginsReturnCodeServerTimeout
-	PluginsReturnCodePrefetch
+	PluginsReturnCodePostfetch
 	PluginsReturnCodeCacheHit
-	PluginsReturnCodeExpiredCache
+	PluginsReturnCodeForcedCache
 )
 
 var PluginsReturnCodeToString = map[PluginsReturnCode]string{
@@ -65,9 +65,9 @@ var PluginsReturnCodeToString = map[PluginsReturnCode]string{
 	PluginsReturnCodeNetworkError:  "NETWORK_ERROR",
 	PluginsReturnCodeCloak:         "CLOAK",
 	PluginsReturnCodeServerTimeout: "SERVER_TIMEOUT",
-	PluginsReturnCodePrefetch:      "PREFETCH",
+	PluginsReturnCodePostfetch:     "POSTFETCH",
 	PluginsReturnCodeCacheHit:      "CACHE_HIT",
-	PluginsReturnCodeExpiredCache:  "FORCED_CACHE",
+	PluginsReturnCodeForcedCache:   "FORCED_CACHE",
 }
 
 type PluginsState struct {
