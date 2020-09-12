@@ -100,7 +100,7 @@ func (plugin *PluginQueryLog) Eval(pluginsState *PluginsState, msg *dns.Msg) err
 		now := time.Now()
 		year, month, day := now.Date()
 		hour, minute, second := now.Clock()
-		millis := time.Now().Nanosecond() / 1000000
+		millis := time.Now().Nanosecond() / 1000
 		ttl := pluginsState.cachedTTL / time.Second
 		tsStr := fmt.Sprintf("[%d-%02d-%02d %02d:%02d:%02d.%003d]", year, int(month), day, hour, minute, second, millis)
 		line = fmt.Sprintf("%s\t%s\t%s\t%s\t%s\t%dms\t%d\t%s\n", tsStr, clientIPStr, StringQuote(qName), qType, returnCode, requestDuration/time.Millisecond,
