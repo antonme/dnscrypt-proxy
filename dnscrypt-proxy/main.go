@@ -9,13 +9,11 @@ import (
 	"fmt"
 	"github.com/jedisct1/dlog"
 	"github.com/kardianos/service"
-	"github.com/miekg/dns"
 	"math/rand"
 	"os"
 	"runtime"
 	"strconv"
 	"sync"
-	"time"
 )
 
 const (
@@ -143,40 +141,6 @@ func (app *App) AppMain() {
 	<-app.quit
 	dlog.Notice("Quit signal received...")
 	app.wg.Done()
-}
-
-func (app *App) LoadCache() error {
-	dlog.Notice("Loading cached responses from [/Users/anton/dev/dnscrypt-proxy.cache]")
-
-	loadFile, _ := os.Open("/Users/anton/dev/dnscrypt-proxy.cache")
-	defer loadFile.Close()
-
-	loadZip, _ := gzip.NewReader(loadFile)
-
-	dec := gob.NewDecoder(loadZip)
-	var keysnum int
-
-	dec.Decode(&keysnum)
-	dlog.Notice(keysnum)
-
-	if keysnum > 0 {
-		for i := 0; i < keysnum; i++ {
-			var key [32]byte
-			var msg dns.Msg
-			var expiration time.Time
-			var packet []byte
-			dec.Decode(&key)
-			dec.Decode(&expiration)
-			dec.Decode(&packet)
-			fmt.Println("Expiration date: ", expiration)
-			msg.Unpack(packet)
-			fmt.Println("Question: ", msg.Question)
-			fmt.Println("Answer: ", msg.Answer)
-			fmt.Println()
-		}
-	}
-
-	return nil
 }
 
 func (app *App) SaveCache() error {

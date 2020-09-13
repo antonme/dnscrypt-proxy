@@ -85,14 +85,18 @@ func (plugin *PluginCache) LoadFromFile() error {
 			var msg dns.Msg
 			var expiration time.Time
 			var packet []byte
+			var repeated bool
+
 			dec.Decode(&key)
 			dec.Decode(&expiration)
 			dec.Decode(&packet)
 			fmt.Println("Expiration date: ", expiration)
 			msg.Unpack(packet)
+			dec.Decode(&repeated)
+
 			fmt.Println("Question: ", msg.Question)
 			fmt.Println("Answer: ", msg.Answer)
-			fmt.Println()
+			fmt.Println("Repeated: ", repeated)
 		}
 	}
 
