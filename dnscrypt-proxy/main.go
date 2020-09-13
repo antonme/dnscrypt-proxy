@@ -14,6 +14,7 @@ import (
 	"runtime"
 	"strconv"
 	"sync"
+	"time"
 )
 
 const (
@@ -147,9 +148,8 @@ func (app *App) SaveCache() error {
 	cachedResponses.RLock()
 	defer cachedResponses.RUnlock()
 
-	if cachedResponses.cache != nil {
-		dlog.Notice("Saving cached responses")
-		dlog.Notice("There's " + strconv.Itoa(cachedResponses.cache.Len()) + " cached entries")
+	if cachedResponses.cache != nil && cachedResponses.cache.Len()>0 {
+		dlog.Notice("Saving "+ strconv.Itoa(cachedResponses.cache.Len()) + "cached responses")
 
 		saveFile, _ := os.Create("/Users/anton/dev/dnscrypt-proxy.cache")
 		defer saveFile.Close()
@@ -183,7 +183,9 @@ func (app *App) SaveCache() error {
 			if err != nil {
 				return err
 			}
-
+			dlog.Notice(cached.msg.Question)
+			dlog.Notice(cached.expiration)
+			fmt.Println("Expiration: ",cached.expiration.Sub(time.Now()))
 			packet, _ := msg.PackBuffer(nil)
 			err = enc.Encode(packet)
 			if err != nil {
@@ -208,7 +210,7 @@ func (app *App) Stop(service service.Service) error {
 
 	err := app.SaveCache()
 	if err != nil {
-		dlog.Fatal("Can't save cached response to a file")
+		dlog.Fatal("Can't save cached responses to a file")
 	}
 
 	dlog.Notice("Stopped.")

@@ -5,7 +5,6 @@ import (
 	"crypto/sha512"
 	"encoding/binary"
 	"encoding/gob"
-	"fmt"
 	"github.com/jedisct1/dlog"
 	"os"
 	"sync"
@@ -60,48 +59,9 @@ func (plugin *PluginCache) Description() string {
 }
 
 func (plugin *PluginCache) Init(proxy *Proxy) error {
-	dlog.Notice("Is this the place")
-	plugin.LoadFromFile()
 	return nil
 }
 
-func (plugin *PluginCache) LoadFromFile() error {
-	dlog.Notice("Loading cached responses from [/Users/anton/dev/dnscrypt-proxy.cache]")
-
-	loadFile, _ := os.Open("/Users/anton/dev/dnscrypt-proxy.cache")
-	defer loadFile.Close()
-
-	loadZip, _ := gzip.NewReader(loadFile)
-
-	dec := gob.NewDecoder(loadZip)
-	var keysnum int
-
-	dec.Decode(&keysnum)
-	dlog.Notice(keysnum)
-
-	if keysnum > 0 {
-		for i := 0; i < keysnum; i++ {
-			var key [32]byte
-			var msg dns.Msg
-			var expiration time.Time
-			var packet []byte
-			var repeated bool
-
-			dec.Decode(&key)
-			dec.Decode(&expiration)
-			dec.Decode(&packet)
-			fmt.Println("Expiration date: ", expiration)
-			msg.Unpack(packet)
-			dec.Decode(&repeated)
-
-			fmt.Println("Question: ", msg.Question)
-			fmt.Println("Answer: ", msg.Answer)
-			fmt.Println("Repeated: ", repeated)
-		}
-	}
-
-	return nil
-}
 
 func (plugin *PluginCache) Drop() error {
 	return nil
@@ -165,6 +125,80 @@ func (plugin *PluginCacheResponse) Description() string {
 }
 
 func (plugin *PluginCacheResponse) Init(proxy *Proxy) error {
+	plugin.LoadFromFile(proxy.cacheSize)
+	return nil
+}
+
+func (plugin *PluginCacheResponse) LoadFromFile(cacheSize int) error {
+	loadFile, _ := os.Open("/Users/anton/dev/dnscrypt-proxy.cache")
+	defer loadFile.Close()
+
+	loadZip, err := gzip.NewReader(loadFile)
+
+	if err != nil {
+		return err
+	}
+
+	dlog.Notice("Loading cached responses from [/Users/anton/dev/dnscrypt-proxy.cache]")
+
+	dec := gob.NewDecoder(loadZip)
+	var keysnum int
+
+	err = dec.Decode(&keysnum)
+	if err != nil {
+		return err
+	}
+
+	dlog.Notice(keysnum)
+
+	if keysnum > 0 {
+		cachedResponses.Lock()
+		defer cachedResponses.Unlock()
+		if cachedResponses.cache == nil {
+			var err error
+			cachedResponses.cache, err = lru.NewARC(cacheSize)
+			if err != nil {
+				cachedResponses.Unlock()
+				return err
+			}
+		}
+
+		for i := 0; i < keysnum; i++ {
+			var key [32]byte
+			var msg dns.Msg
+			var expiration time.Time
+			var packet []byte
+			var repeated bool
+
+
+			dec.Decode(&key)
+			dec.Decode(&expiration)
+			dec.Decode(&packet)
+			dec.Decode(&repeated)
+
+			msg.Unpack(packet)
+
+			dlog.Debugf("\nQuestion: $s", msg.Question)
+			dlog.Debug("==========================")
+			dlog.Debugf("Expiration date: %s", expiration)
+			dlog.Debugf("Answer: %s", msg.Answer)
+			dlog.Debugf("Repeated: %b", repeated)
+			dlog.Debugf("TTL: %d", expiration.Sub(time.Now()))
+
+			cachedResponse := CachedResponse{
+				expiration: expiration,
+				msg:        msg,
+			}
+
+			if time.Now().Before(cachedResponse.expiration){
+			updateTTL(&msg, cachedResponse.expiration)
+			}
+
+			cachedResponses.cache.Add(key, cachedResponse)
+
+		}
+	}
+
 	return nil
 }
 
@@ -203,9 +237,7 @@ func (plugin *PluginCacheResponse) Eval(pluginsState *PluginsState, msg *dns.Msg
 	}
 	cachedResponses.cache.Add(cacheKey, cachedResponse)
 	cachedResponses.Unlock()
-	/*if pluginsState.action == PluginsActionPrefetch {
-		pluginsState.returnCode = PluginsReturnCodePostfetch
-	}*/
+
 	updateTTL(msg, cachedResponse.expiration)
 
 	return nil

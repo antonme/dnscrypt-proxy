@@ -29,7 +29,7 @@
 ##
 ## Remove the leading # first to enable this; lines starting with # are ignored.
 
-server_names = ['cloudflare','google','meganerd','yandex','dns.digitale-gesellschaft.ch-ipv6-2']
+server_names = ['cloudflare','google','meganerd','yandex']
 
 
 ## List of local addresses and ports to listen to. Can be IPv4 and/or IPv6.
@@ -64,7 +64,7 @@ ipv6_servers = true
 dnscrypt_servers = true
 
 # Use servers implementing the DNS-over-HTTPS protocol
-doh_servers = false
+doh_servers = true
 
 
 ## Require servers defined by remote sources to satisfy specific properties
@@ -73,7 +73,7 @@ doh_servers = false
 require_dnssec = false
 
 # Server must not log user queries (declarative)
-require_nolog = true
+require_nolog = false
 
 # Server must not enforce its own blocklist (for parental control, ads blocking...)
 require_nofilter = true
@@ -267,7 +267,7 @@ log_files_max_size = 100
 log_files_max_age = 7
 
 # Maximum log files backups to keep (or 0 to keep all backups)
-log_files_max_backups = 1
+log_files_max_backups = 4
 
 
 
@@ -342,6 +342,22 @@ reject_ttl = 120
 cache = true
 
 
+
+
+
+## Use forced cache (always answer fast from cache, even if it is expired, then renew it)
+
+cache_forced = true
+
+
+## Save cache to file
+
+cache_persistent = true
+
+cache_filename = '/Users/anton/dev/dnscrypt-proxy.cache'
+
+
+
 ## Cache size
 
 cache_size = 262144
@@ -349,7 +365,7 @@ cache_size = 262144
 
 ## Minimum TTL for cached entries
 
-cache_min_ttl = 0
+cache_min_ttl = 60
 
 
 ## Maximum TTL for cached entries
