@@ -1,20 +1,25 @@
 package main
 
 import (
+	"compress/gzip"
 	crypto_rand "crypto/rand"
 	"encoding/binary"
+	"encoding/gob"
 	"flag"
 	"fmt"
 	"github.com/jedisct1/dlog"
 	"github.com/kardianos/service"
+	"github.com/miekg/dns"
 	"math/rand"
 	"os"
 	"runtime"
+	"strconv"
 	"sync"
+	"time"
 )
 
 const (
-	AppVersion            = "2.0.44"
+	AppVersion            = "2.0.45"
 	DefaultConfigFileName = "dnscrypt-proxy.toml"
 )
 
@@ -27,7 +32,7 @@ type App struct {
 
 func main() {
 	TimezoneSetup()
-	dlog.Init("dnscrypt-proxy", dlog.SeverityNotice, "DAEMON")
+	dlog.Init("dnscrypt-proxy-home", dlog.SeverityNotice, "DAEMON")
 
 	seed := make([]byte, 8)
 	crypto_rand.Read(seed)
@@ -67,9 +72,9 @@ func main() {
 	}
 
 	svcConfig := &service.Config{
-		Name:             "dnscrypt-proxy",
+		Name:             "dnscrypt-proxy-home",
 		DisplayName:      "DNSCrypt client proxy",
-		Description:      "Encrypted/authenticated DNS proxy",
+		Description:      "Encrypted/authenticated DNS proxy by @dnscrypt. With some additional featuref by @antonme",
 		WorkingDirectory: pwd,
 		Arguments:        []string{"-config", *flags.ConfigFile},
 	}
@@ -140,8 +145,108 @@ func (app *App) AppMain() {
 	app.wg.Done()
 }
 
+func (app *App) LoadCache() error {
+	dlog.Notice("Loading cached responses from [/Users/anton/dev/dnscrypt-proxy.cache]")
+
+	loadFile, _ := os.Open("/Users/anton/dev/dnscrypt-proxy.cache")
+	defer loadFile.Close()
+
+	loadZip, _ := gzip.NewReader(loadFile)
+
+	dec := gob.NewDecoder(loadZip)
+	var keysnum int
+
+	dec.Decode(&keysnum)
+	dlog.Notice(keysnum)
+
+	if keysnum > 0 {
+		for i := 0; i < keysnum; i++ {
+			var key [32]byte
+			var msg dns.Msg
+			var expiration time.Time
+			var packet []byte
+			dec.Decode(&key)
+			dec.Decode(&expiration)
+			dec.Decode(&packet)
+			fmt.Println("Expiration date: ", expiration)
+			msg.Unpack(packet)
+			fmt.Println("Question: ", msg.Question)
+			fmt.Println("Answer: ", msg.Answer)
+			fmt.Println()
+		}
+	}
+
+	return nil
+}
+
+func (app *App) SaveCache() error {
+	cachedResponses.RLock()
+	defer cachedResponses.RUnlock()
+
+	if cachedResponses.cache != nil {
+		dlog.Notice("Saving cached responses")
+		dlog.Notice("There's " + strconv.Itoa(cachedResponses.cache.Len()) + " cached entries")
+
+		saveFile, _ := os.Create("/Users/anton/dev/dnscrypt-proxy.cache")
+		defer saveFile.Close()
+
+		saveZip := gzip.NewWriter(saveFile)
+		defer saveZip.Close()
+
+		enc := gob.NewEncoder(saveZip)
+
+		cachedResponses.RLock()
+		defer cachedResponses.RUnlock()
+
+		err := enc.Encode(cachedResponses.cache.Len())
+		if err != nil {
+			return err
+		}
+
+		for keyNum := range cachedResponses.cache.Keys() {
+
+			cacheKey := cachedResponses.cache.Keys()[keyNum]
+			err = enc.Encode(cacheKey)
+			if err != nil {
+				return err
+			}
+
+			cachedAny, _ := cachedResponses.cache.Peek(cacheKey)
+			cached := cachedAny.(CachedResponse)
+			msg := cached.msg
+
+			err = enc.Encode(cached.expiration)
+			if err != nil {
+				return err
+			}
+
+			packet, _ := msg.PackBuffer(nil)
+			err = enc.Encode(packet)
+			if err != nil {
+				return err
+			}
+
+			qHash := computeCacheKey(nil, &msg)
+			_, queueExist := app.proxy.queueLock.queue[qHash]
+			err = enc.Encode(queueExist)
+			if err != nil {
+				return err
+			}
+		}
+	} else {
+		dlog.Notice("No cache to save")
+	}
+	return nil
+}
+
 func (app *App) Stop(service service.Service) error {
 	PidFileRemove()
+
+	err := app.SaveCache()
+	if err != nil {
+		dlog.Fatal("Can't save cached response to a file")
+	}
+
 	dlog.Notice("Stopped.")
 	return nil
 }

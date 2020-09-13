@@ -323,7 +323,7 @@ func ConfigLoad(proxy *Proxy, flags *ConfigFlags) error {
 		}
 	}
 	if !*flags.Child {
-		dlog.Noticef("dnscrypt-proxy %s", AppVersion)
+		dlog.Noticef("dnscrypt-proxy-home %s", AppVersion)
 	}
 	undecoded := md.Undecoded()
 	if len(undecoded) > 0 {

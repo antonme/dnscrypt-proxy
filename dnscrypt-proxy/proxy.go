@@ -244,7 +244,7 @@ func (proxy *Proxy) StartProxy() {
 		os.Exit(0)
 	}
 	if liveServers > 0 {
-		dlog.Noticef("dnscrypt-proxy is ready - live servers: %d", liveServers)
+		dlog.Noticef("dnscrypt-proxy-home is ready - live servers: %d", liveServers)
 		if !proxy.child {
 			if err := ServiceManagerReadyNotify(); err != nil {
 				dlog.Fatal(err)
@@ -252,7 +252,7 @@ func (proxy *Proxy) StartProxy() {
 		}
 	} else if err != nil {
 		dlog.Error(err)
-		dlog.Notice("dnscrypt-proxy is waiting for at least one server to be reachable")
+		dlog.Notice("dnscrypt-proxy-home is waiting for at least one server to be reachable")
 	}
 	go func() {
 		for {
@@ -679,10 +679,8 @@ func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string,
 		//qName, _ := NormalizeQName(msg.Question[0].Name)
 		//var qHash uint32 = hash(qName)
 		var qHash = computeCacheKey(nil, &msg)
-		proxy.queueLock.RLock()
-		aha := !proxy.queueLock.queue[qHash]
-		proxy.queueLock.RUnlock()
-		if aha {
+
+		if !proxy.queueLock.queue[qHash] {
 			proxy.queueLock.Lock()
 			proxy.queueLock.queue[qHash] = true
 			proxy.queueLock.Unlock()
@@ -692,7 +690,6 @@ func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string,
 			proxy.queueLock.Lock()
 			proxy.queueLock.queue[qHash] = false
 			proxy.queueLock.Unlock()
-
 		}
 	}
 

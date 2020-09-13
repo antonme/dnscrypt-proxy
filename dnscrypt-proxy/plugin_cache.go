@@ -1,8 +1,13 @@
 package main
 
 import (
+	"compress/gzip"
 	"crypto/sha512"
 	"encoding/binary"
+	"encoding/gob"
+	"fmt"
+	"github.com/jedisct1/dlog"
+	"os"
 	"sync"
 	"time"
 
@@ -55,6 +60,42 @@ func (plugin *PluginCache) Description() string {
 }
 
 func (plugin *PluginCache) Init(proxy *Proxy) error {
+	dlog.Notice("Is this the place")
+	plugin.LoadFromFile()
+	return nil
+}
+
+func (plugin *PluginCache) LoadFromFile() error {
+	dlog.Notice("Loading cached responses from [/Users/anton/dev/dnscrypt-proxy.cache]")
+
+	loadFile, _ := os.Open("/Users/anton/dev/dnscrypt-proxy.cache")
+	defer loadFile.Close()
+
+	loadZip, _ := gzip.NewReader(loadFile)
+
+	dec := gob.NewDecoder(loadZip)
+	var keysnum int
+
+	dec.Decode(&keysnum)
+	dlog.Notice(keysnum)
+
+	if keysnum > 0 {
+		for i := 0; i < keysnum; i++ {
+			var key [32]byte
+			var msg dns.Msg
+			var expiration time.Time
+			var packet []byte
+			dec.Decode(&key)
+			dec.Decode(&expiration)
+			dec.Decode(&packet)
+			fmt.Println("Expiration date: ", expiration)
+			msg.Unpack(packet)
+			fmt.Println("Question: ", msg.Question)
+			fmt.Println("Answer: ", msg.Answer)
+			fmt.Println()
+		}
+	}
+
 	return nil
 }
 
