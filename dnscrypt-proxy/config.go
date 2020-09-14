@@ -50,6 +50,9 @@ type Config struct {
 	BlockUnqualified         bool   `toml:"block_unqualified"`
 	BlockUndelegated         bool   `toml:"block_undelegated"`
 	Cache                    bool
+	CacheForced              bool                        `toml:"cache_forced"`
+	CachePersistent          bool                        `toml:"cache_persistent"`
+	CacheFilename            string                      `toml:"cache_filename"`
 	CacheSize                int                         `toml:"cache_size"`
 	CacheNegTTL              uint32                      `toml:"cache_neg_ttl"`
 	CacheNegMinTTL           uint32                      `toml:"cache_neg_min_ttl"`
@@ -114,6 +117,8 @@ func newConfig() Config {
 		CertIgnoreTimestamp:      false,
 		EphemeralKeys:            false,
 		Cache:                    true,
+		CacheForced:              false,
+		CachePersistent:          true,
 		CacheSize:                512,
 		CacheNegTTL:              0,
 		CacheNegMinTTL:           60,

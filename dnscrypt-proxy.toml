@@ -452,7 +452,7 @@ cache_neg_max_ttl = 300
 
   ## Path to the query log file (absolute, or relative to the same directory as the config file)
 
-  # file = 'nx.log'
+  file = '/Users/anton/dev/nx.log'
 
 
   ## Query log format (currently supported: tsv and ltsv)
@@ -486,8 +486,7 @@ blocked_names_file = '/Users/anton/dev/dnscrypt-proxy/blocked-names.txt'
 
 
   ## Optional path to a file logging blocked queries
-
-log_file = '/Users/anton/dev/blocked-names.log'
+  log_file = '/Users/anton/dev/blocked-names.log'
 
 
   ## Optional log format: tsv or ltsv (default: tsv)
