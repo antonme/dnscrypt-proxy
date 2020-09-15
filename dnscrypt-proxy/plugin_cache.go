@@ -5,15 +5,15 @@ import (
 	"crypto/sha512"
 	"encoding/binary"
 	"encoding/gob"
+	"encoding/json"
 	"fmt"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/jedisct1/dlog"
+	"github.com/miekg/dns"
 	"os"
 	"strconv"
 	"sync"
 	"time"
-
-	lru "github.com/hashicorp/golang-lru"
-	"github.com/miekg/dns"
 )
 
 type CachedResponse struct {
@@ -143,11 +143,79 @@ func (cachedResponses *CachedResponses) LoadFromFile(cacheFilename string, cache
 	return nil
 }
 
-func (cachedResponses *CachedResponses) SaveCache(cacheFilename string) error {
+func (cachedResponses *CachedResponses) SaveCacheNew(cacheFilename string) error {
 	cachedResponses.RLock()
 	defer cachedResponses.RUnlock()
 
 	if cachedResponses.cache != nil && cachedResponses.cache.Len() > 0 {
+
+		dlog.Notice("Saving " + strconv.Itoa(cachedResponses.cache.Len()) + "cached responses")
+
+		saveFile, _ := os.Create(cacheFilename + ".new")
+		defer saveFile.Close()
+
+		saveZip := gzip.NewWriter(saveFile)
+		defer saveZip.Close()
+
+		enc := json.NewEncoder(saveZip)
+
+		cachedResponses.RLock()
+		defer cachedResponses.RUnlock()
+
+		//err := enc.Encode(cachedResponses.cache.Len())
+		/*if err != nil {
+			return err
+		}*/
+
+		for keyNum := range cachedResponses.cache.Keys() {
+
+			cacheKey := cachedResponses.cache.Keys()[keyNum]
+			err := enc.Encode(cacheKey)
+			if err != nil {
+				return err
+			}
+
+			cachedAny, _ := cachedResponses.cache.Peek(cacheKey)
+			cached := cachedAny.(CachedResponse)
+
+			err = enc.Encode(cached.expiration)
+			if err != nil {
+				return err
+			}
+			dlog.Notice(cached.msg.Question)
+			dlog.Notice(cached.expiration)
+			fmt.Println("Expiration: ", cached.expiration.Sub(time.Now()))
+
+			err = enc.Encode(cached.msg)
+			if err != nil {
+				return err
+			}
+
+			qHash := computeCacheKey(nil, &cached.msg)
+			_, queueExist := cachedResponses.fetchLock[qHash]
+
+			err = enc.Encode(queueExist)
+			if err != nil {
+				return err
+			}
+		}
+	} else {
+		dlog.Notice("No cache to save")
+	}
+	return nil
+}
+
+func (cachedResponses *CachedResponses) SaveCache(cacheFilename string) error {
+	cachedResponses.RLock()
+	defer cachedResponses.RUnlock()
+
+	err := cachedResponses.SaveCacheNew(cacheFilename)
+	if err != nil {
+		return err
+	}
+
+	if cachedResponses.cache != nil && cachedResponses.cache.Len() > 0 {
+
 		dlog.Notice("Saving " + strconv.Itoa(cachedResponses.cache.Len()) + "cached responses")
 
 		saveFile, _ := os.Create(cacheFilename)
