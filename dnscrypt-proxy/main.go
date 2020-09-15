@@ -1,10 +1,8 @@
 package main
 
 import (
-	"compress/gzip"
 	crypto_rand "crypto/rand"
 	"encoding/binary"
-	"encoding/gob"
 	"flag"
 	"fmt"
 	"github.com/jedisct1/dlog"
@@ -12,9 +10,7 @@ import (
 	"math/rand"
 	"os"
 	"runtime"
-	"strconv"
 	"sync"
-	"time"
 )
 
 const (
@@ -144,71 +140,10 @@ func (app *App) AppMain() {
 	app.wg.Done()
 }
 
-func (app *App) SaveCache() error {
-	cachedResponses.RLock()
-	defer cachedResponses.RUnlock()
-
-	if cachedResponses.cache != nil && cachedResponses.cache.Len()>0 {
-		dlog.Notice("Saving "+ strconv.Itoa(cachedResponses.cache.Len()) + "cached responses")
-
-		saveFile, _ := os.Create("/Users/anton/dev/dnscrypt-proxy.cache")
-		defer saveFile.Close()
-
-		saveZip := gzip.NewWriter(saveFile)
-		defer saveZip.Close()
-
-		enc := gob.NewEncoder(saveZip)
-
-		cachedResponses.RLock()
-		defer cachedResponses.RUnlock()
-
-		err := enc.Encode(cachedResponses.cache.Len())
-		if err != nil {
-			return err
-		}
-
-		for keyNum := range cachedResponses.cache.Keys() {
-
-			cacheKey := cachedResponses.cache.Keys()[keyNum]
-			err = enc.Encode(cacheKey)
-			if err != nil {
-				return err
-			}
-
-			cachedAny, _ := cachedResponses.cache.Peek(cacheKey)
-			cached := cachedAny.(CachedResponse)
-			msg := cached.msg
-
-			err = enc.Encode(cached.expiration)
-			if err != nil {
-				return err
-			}
-			dlog.Notice(cached.msg.Question)
-			dlog.Notice(cached.expiration)
-			fmt.Println("Expiration: ",cached.expiration.Sub(time.Now()))
-			packet, _ := msg.PackBuffer(nil)
-			err = enc.Encode(packet)
-			if err != nil {
-				return err
-			}
-
-			qHash := computeCacheKey(nil, &msg)
-			_, queueExist := app.proxy.queueLock.queue[qHash]
-			err = enc.Encode(queueExist)
-			if err != nil {
-				return err
-			}
-		}
-	} else {
-		dlog.Notice("No cache to save")
-	}
-	return nil
-}
-
 func (app *App) Stop(service service.Service) error {
 	PidFileRemove()
 
-	err := app.SaveCache()
+	err := cachedResponses.SaveCache()
 	if err != nil {
 		dlog.Fatal("Can't save cached responses to a file")
 	}

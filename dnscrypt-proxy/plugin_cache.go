@@ -5,8 +5,10 @@ import (
 	"crypto/sha512"
 	"encoding/binary"
 	"encoding/gob"
+	"fmt"
 	"github.com/jedisct1/dlog"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -22,6 +24,7 @@ type CachedResponse struct {
 type CachedResponses struct {
 	sync.RWMutex
 	cache *lru.ARCCache
+	queue map[[32]byte]bool
 }
 
 var cachedResponses CachedResponses
@@ -45,7 +48,149 @@ func computeCacheKey(pluginsState *PluginsState, msg *dns.Msg) [32]byte {
 	return sum
 }
 
-// ---
+func (cachedResponses *CachedResponses) LoadFromFile(cacheSize int) error {
+	loadFile, _ := os.Open("/Users/anton/dev/dnscrypt-proxy.cache")
+	defer loadFile.Close()
+
+	loadZip, err := gzip.NewReader(loadFile)
+
+	if err != nil {
+		return err
+	}
+
+	dlog.Notice("Loading cached responses from [/Users/anton/dev/dnscrypt-proxy.cache]")
+
+	dec := gob.NewDecoder(loadZip)
+	var keysnum int
+
+	err = dec.Decode(&keysnum)
+	if err != nil {
+		return err
+	}
+
+	dlog.Notice(keysnum)
+
+	if keysnum > 0 {
+		cachedResponses.Lock()
+		defer cachedResponses.Unlock()
+		if cachedResponses.cache == nil {
+			var err error
+			cachedResponses.cache, err = lru.NewARC(cacheSize)
+			cachedResponses.queue = make(map[[32]byte]bool)
+			if err != nil {
+				cachedResponses.Unlock()
+				return err
+			}
+		}
+
+		for i := 0; i < keysnum; i++ {
+			var key [32]byte
+			var msg dns.Msg
+			var expiration time.Time
+			var packet []byte
+			var frequent bool
+
+			dec.Decode(&key)
+			dec.Decode(&expiration)
+			dec.Decode(&packet)
+			dec.Decode(&frequent)
+
+			msg.Unpack(packet)
+
+			dlog.Debugf("\nQuestion: %s", msg.Question[0].Name)
+			dlog.Debug("==========================")
+			dlog.Debugf("Expiration date: %s", expiration)
+			for i := range msg.Answer {
+				dlog.Debugf("Answer: %s", msg.Answer[i])
+			}
+
+			dlog.Debugf("TTL: %d", expiration.Sub(time.Now())/time.Second)
+
+			cachedResponse := CachedResponse{
+				expiration: expiration,
+				msg:        msg,
+			}
+
+			if time.Now().Before(cachedResponse.expiration) {
+				updateTTL(&msg, cachedResponse.expiration)
+			}
+
+			cachedResponses.cache.Add(key, cachedResponse)
+
+			if frequent {
+				dlog.Debugf("Frequent.")
+				cachedResponses.cache.Add(key, cachedResponse)
+				cachedResponses.queue[key] = false
+			} else {
+				dlog.Debugf("Not frequent.")
+			}
+
+		}
+	}
+
+	return nil
+}
+
+func (cache *CachedResponses) SaveCache() error {
+	cachedResponses.RLock()
+	defer cachedResponses.RUnlock()
+
+	if cachedResponses.cache != nil && cachedResponses.cache.Len() > 0 {
+		dlog.Notice("Saving " + strconv.Itoa(cachedResponses.cache.Len()) + "cached responses")
+
+		saveFile, _ := os.Create("/Users/anton/dev/dnscrypt-proxy.cache")
+		defer saveFile.Close()
+
+		saveZip := gzip.NewWriter(saveFile)
+		defer saveZip.Close()
+
+		enc := gob.NewEncoder(saveZip)
+
+		cachedResponses.RLock()
+		defer cachedResponses.RUnlock()
+
+		err := enc.Encode(cachedResponses.cache.Len())
+		if err != nil {
+			return err
+		}
+
+		for keyNum := range cachedResponses.cache.Keys() {
+
+			cacheKey := cachedResponses.cache.Keys()[keyNum]
+			err = enc.Encode(cacheKey)
+			if err != nil {
+				return err
+			}
+
+			cachedAny, _ := cachedResponses.cache.Peek(cacheKey)
+			cached := cachedAny.(CachedResponse)
+			msg := cached.msg
+
+			err = enc.Encode(cached.expiration)
+			if err != nil {
+				return err
+			}
+			dlog.Notice(cached.msg.Question)
+			dlog.Notice(cached.expiration)
+			fmt.Println("Expiration: ", cached.expiration.Sub(time.Now()))
+			packet, _ := msg.PackBuffer(nil)
+			err = enc.Encode(packet)
+			if err != nil {
+				return err
+			}
+
+			qHash := computeCacheKey(nil, &msg)
+			_, queueExist := cache.queue[qHash]
+			err = enc.Encode(queueExist)
+			if err != nil {
+				return err
+			}
+		}
+	} else {
+		dlog.Notice("No cache to save")
+	}
+	return nil
+}
 
 type PluginCache struct {
 }
@@ -61,7 +206,6 @@ func (plugin *PluginCache) Description() string {
 func (plugin *PluginCache) Init(proxy *Proxy) error {
 	return nil
 }
-
 
 func (plugin *PluginCache) Drop() error {
 	return nil
@@ -125,80 +269,7 @@ func (plugin *PluginCacheResponse) Description() string {
 }
 
 func (plugin *PluginCacheResponse) Init(proxy *Proxy) error {
-	plugin.LoadFromFile(proxy.cacheSize)
-	return nil
-}
-
-func (plugin *PluginCacheResponse) LoadFromFile(cacheSize int) error {
-	loadFile, _ := os.Open("/Users/anton/dev/dnscrypt-proxy.cache")
-	defer loadFile.Close()
-
-	loadZip, err := gzip.NewReader(loadFile)
-
-	if err != nil {
-		return err
-	}
-
-	dlog.Notice("Loading cached responses from [/Users/anton/dev/dnscrypt-proxy.cache]")
-
-	dec := gob.NewDecoder(loadZip)
-	var keysnum int
-
-	err = dec.Decode(&keysnum)
-	if err != nil {
-		return err
-	}
-
-	dlog.Notice(keysnum)
-
-	if keysnum > 0 {
-		cachedResponses.Lock()
-		defer cachedResponses.Unlock()
-		if cachedResponses.cache == nil {
-			var err error
-			cachedResponses.cache, err = lru.NewARC(cacheSize)
-			if err != nil {
-				cachedResponses.Unlock()
-				return err
-			}
-		}
-
-		for i := 0; i < keysnum; i++ {
-			var key [32]byte
-			var msg dns.Msg
-			var expiration time.Time
-			var packet []byte
-			var repeated bool
-
-
-			dec.Decode(&key)
-			dec.Decode(&expiration)
-			dec.Decode(&packet)
-			dec.Decode(&repeated)
-
-			msg.Unpack(packet)
-
-			dlog.Debugf("\nQuestion: $s", msg.Question)
-			dlog.Debug("==========================")
-			dlog.Debugf("Expiration date: %s", expiration)
-			dlog.Debugf("Answer: %s", msg.Answer)
-			dlog.Debugf("Repeated: %b", repeated)
-			dlog.Debugf("TTL: %d", expiration.Sub(time.Now()))
-
-			cachedResponse := CachedResponse{
-				expiration: expiration,
-				msg:        msg,
-			}
-
-			if time.Now().Before(cachedResponse.expiration){
-			updateTTL(&msg, cachedResponse.expiration)
-			}
-
-			cachedResponses.cache.Add(key, cachedResponse)
-
-		}
-	}
-
+	cachedResponses.LoadFromFile(proxy.cacheSize)
 	return nil
 }
 
@@ -230,6 +301,8 @@ func (plugin *PluginCacheResponse) Eval(pluginsState *PluginsState, msg *dns.Msg
 	if cachedResponses.cache == nil {
 		var err error
 		cachedResponses.cache, err = lru.NewARC(pluginsState.cacheSize)
+		cachedResponses.queue = make(map[[32]byte]bool)
+
 		if err != nil {
 			cachedResponses.Unlock()
 			return err

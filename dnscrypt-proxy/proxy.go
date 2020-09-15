@@ -6,7 +6,6 @@ import (
 	"net"
 	"os"
 	"runtime"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -17,11 +16,6 @@ import (
 	"golang.org/x/crypto/curve25519"
 	"hash/fnv"
 )
-
-type PrefetchQueue struct {
-	sync.RWMutex
-	queue map[[32]byte]bool
-}
 
 type Proxy struct {
 	udpListeners                   []*net.UDPConn
@@ -94,7 +88,6 @@ type Proxy struct {
 	anonDirectCertFallback         bool
 	dns64Prefixes                  []string
 	dns64Resolvers                 []string
-	queueLock                      PrefetchQueue
 }
 
 func hash(s string) uint32 {
@@ -235,7 +228,6 @@ func (proxy *Proxy) StartProxy() {
 		proxy.serversInfo.registerServer(registeredServer.name, registeredServer.stamp)
 	}
 	proxy.startAcceptingClients()
-	proxy.queueLock.queue = make(map[[32]byte]bool)
 	liveServers, err := proxy.serversInfo.refresh(proxy)
 	if liveServers > 0 {
 		proxy.certIgnoreTimestamp = false
@@ -680,16 +672,16 @@ func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string,
 		//var qHash uint32 = hash(qName)
 		var qHash = computeCacheKey(nil, &msg)
 
-		if !proxy.queueLock.queue[qHash] {
-			proxy.queueLock.Lock()
-			proxy.queueLock.queue[qHash] = true
-			proxy.queueLock.Unlock()
+		if !cachedResponses.queue[qHash] {
+			cachedResponses.Lock()
+			cachedResponses.queue[qHash] = true
+			cachedResponses.Unlock()
 
 			proxy.processIncomingQuery("none", "none", query, clientAddr, clientPc, start, true)
 
-			proxy.queueLock.Lock()
-			proxy.queueLock.queue[qHash] = false
-			proxy.queueLock.Unlock()
+			cachedResponses.Lock()
+			cachedResponses.queue[qHash] = false
+			cachedResponses.Unlock()
 		}
 	}
 
