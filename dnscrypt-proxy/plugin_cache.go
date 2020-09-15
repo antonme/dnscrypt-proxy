@@ -5,20 +5,18 @@ import (
 	"crypto/sha512"
 	"encoding/binary"
 	"encoding/gob"
-	"fmt"
+	"encoding/json"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/jedisct1/dlog"
+	"github.com/miekg/dns"
 	"os"
-	"strconv"
 	"sync"
 	"time"
-
-	lru "github.com/hashicorp/golang-lru"
-	"github.com/miekg/dns"
 )
 
 type CachedResponse struct {
-	expiration time.Time
-	msg        dns.Msg
+	Expiration time.Time
+	Msg        dns.Msg
 }
 
 type CachedResponses struct {
@@ -117,21 +115,21 @@ func (cachedResponses *CachedResponses) LoadFromFile(cacheFilename string, cache
 			}
 
 			cachedResponse := CachedResponse{
-				expiration: expiration,
-				msg:        msg,
+				Expiration: expiration,
+				Msg:        msg,
 			}
 
-			if time.Now().Before(cachedResponse.expiration) {
-				updateTTL(&msg, cachedResponse.expiration)
+			if time.Now().Before(cachedResponse.Expiration) {
+				updateTTL(&msg, cachedResponse.Expiration)
 			}
 
 			cachedResponses.cache.Add(key, cachedResponse)
 
 			if frequent {
-				dlog.Debugf("Question is [%s], frequent, expiration date: %s (TTL: %d)", msg.Question[0].Name, expiration, expiration.Sub(time.Now())/time.Second)
+				dlog.Debugf("Question is [%s], frequent, Expiration date: %s (TTL: %d)", msg.Question[0].Name, expiration, expiration.Sub(time.Now())/time.Second)
 				cachedResponses.cache.Add(key, cachedResponse)
 			} else {
-				dlog.Debugf("Question is [%s], non frequent, expiration date: %s (TTL: %d)", msg.Question[0].Name, expiration, expiration.Sub(time.Now())/time.Second)
+				dlog.Debugf("Question is [%s], non frequent, Expiration date: %s (TTL: %d)", msg.Question[0].Name, expiration, expiration.Sub(time.Now())/time.Second)
 			}
 			for i := range msg.Answer {
 				dlog.Debugf("Answer: [%s]", msg.Answer[i])
@@ -143,12 +141,71 @@ func (cachedResponses *CachedResponses) LoadFromFile(cacheFilename string, cache
 	return nil
 }
 
-func (cachedResponses *CachedResponses) SaveCache(cacheFilename string) error {
+type SavedResponse struct {
+	Expiration time.Time
+	Frequent   bool
+	Msg        dns.Msg
+}
+
+func (cachedResponses *CachedResponses) SaveCacheNew(cacheFilename string) error {
 	cachedResponses.RLock()
 	defer cachedResponses.RUnlock()
 
 	if cachedResponses.cache != nil && cachedResponses.cache.Len() > 0 {
-		dlog.Notice("Saving " + strconv.Itoa(cachedResponses.cache.Len()) + "cached responses")
+
+		dlog.Noticef("Saving (new way) %d cached responses", cachedResponses.cache.Len())
+
+		saveFile, _ := os.Create(cacheFilename + ".new.gz")
+		defer saveFile.Close()
+
+		saveZip := gzip.NewWriter(saveFile)
+		defer saveZip.Close()
+
+		enc := json.NewEncoder(saveZip)
+
+		cachedResponses.RLock()
+		defer cachedResponses.RUnlock()
+
+		keys := cachedResponses.cache.Keys()
+		for keyNum := range keys {
+
+			cacheKey := keys[keyNum]
+			cachedAny, _ := cachedResponses.cache.Peek(cacheKey)
+			cached := cachedAny.(CachedResponse)
+
+			_, mapValueExist := cachedResponses.fetchLock[cacheKey.([32]byte)]
+
+			savedResponse := SavedResponse{
+				Expiration: cached.Expiration,
+				Frequent:   mapValueExist,
+				Msg:        cached.Msg,
+			}
+			dlog.Debugf("Saving response for [%s], expiration: [%s]", cached.Msg.Question[0].Name, cached.Expiration)
+
+			err := enc.Encode(savedResponse)
+
+			if err != nil {
+				return err
+			}
+		}
+	} else {
+		dlog.Notice("No cache to save")
+	}
+	return nil
+}
+
+func (cachedResponses *CachedResponses) SaveCache(cacheFilename string) error {
+	cachedResponses.RLock()
+	defer cachedResponses.RUnlock()
+
+	err := cachedResponses.SaveCacheNew(cacheFilename)
+	if err != nil {
+		return err
+	}
+
+	if cachedResponses.cache != nil && cachedResponses.cache.Len() > 0 {
+
+		dlog.Noticef("Saving %d cached responses", cachedResponses.cache.Len())
 
 		saveFile, _ := os.Create(cacheFilename)
 		defer saveFile.Close()
@@ -166,9 +223,11 @@ func (cachedResponses *CachedResponses) SaveCache(cacheFilename string) error {
 			return err
 		}
 
-		for keyNum := range cachedResponses.cache.Keys() {
+		keys := cachedResponses.cache.Keys()
 
-			cacheKey := cachedResponses.cache.Keys()[keyNum]
+		for keyNum := range keys {
+
+			cacheKey := keys[keyNum]
 			err = enc.Encode(cacheKey)
 			if err != nil {
 				return err
@@ -176,15 +235,14 @@ func (cachedResponses *CachedResponses) SaveCache(cacheFilename string) error {
 
 			cachedAny, _ := cachedResponses.cache.Peek(cacheKey)
 			cached := cachedAny.(CachedResponse)
-			msg := cached.msg
+			msg := cached.Msg
 
-			err = enc.Encode(cached.expiration)
+			err = enc.Encode(cached.Expiration)
 			if err != nil {
 				return err
 			}
-			dlog.Notice(cached.msg.Question)
-			dlog.Notice(cached.expiration)
-			fmt.Println("Expiration: ", cached.expiration.Sub(time.Now()))
+			dlog.Debug(cached.Msg.Question)
+			dlog.Debug(cached.Expiration)
 			packet, _ := msg.PackBuffer(nil)
 			err = enc.Encode(packet)
 			if err != nil {
@@ -242,26 +300,26 @@ func (plugin *PluginCache) Eval(pluginsState *PluginsState, msg *dns.Msg) error 
 	}
 	cached := cachedAny.(CachedResponse)
 
-	synth := cached.msg
+	synth := cached.Msg
 	synth.Id = msg.Id
 	synth.Response = true
 	synth.Compress = true
 	synth.Question = msg.Question
 
-	if time.Now().After(cached.expiration) {
+	if time.Now().After(cached.Expiration) {
 		if pluginsState.cacheForced == false || pluginsState.forceRequest {
 			pluginsState.sessionData["stale"] = &synth
 			return nil
 		}
 		pluginsState.forceRequest = true
 	} else {
-		updateTTL(&cached.msg, cached.expiration)
+		updateTTL(&cached.Msg, cached.Expiration)
 	}
 
 	pluginsState.synthResponse = &synth
 	pluginsState.action = PluginsReturnCodeSynth
 	pluginsState.cacheHit = true
-	pluginsState.cachedTTL = cached.expiration.Sub(time.Now())
+	pluginsState.cachedTTL = cached.Expiration.Sub(time.Now())
 
 	return nil
 }
@@ -309,8 +367,8 @@ func (plugin *PluginCacheResponse) Eval(pluginsState *PluginsState, msg *dns.Msg
 
 	pluginsState.cachedTTL = ttl
 	cachedResponse := CachedResponse{
-		expiration: time.Now().Add(ttl),
-		msg:        *msg,
+		Expiration: time.Now().Add(ttl),
+		Msg:        *msg,
 	}
 
 	cachedResponses.Lock()
@@ -327,7 +385,7 @@ func (plugin *PluginCacheResponse) Eval(pluginsState *PluginsState, msg *dns.Msg
 	cachedResponses.cache.Add(cacheKey, cachedResponse)
 	cachedResponses.Unlock()
 
-	updateTTL(msg, cachedResponse.expiration)
+	updateTTL(msg, cachedResponse.Expiration)
 
 	return nil
 }

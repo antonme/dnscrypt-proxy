@@ -139,7 +139,7 @@ lb_estimator = true
 
 ## Log level (0-6, default: 2 - 0 is very verbose, 6 only contains fatal errors)
 
-log_level = 0
+log_level = 1
 
 
 ## Log file for the application, as an alternative to sending logs to
@@ -341,9 +341,9 @@ reject_ttl = 120
 
 cache = true
 
+## Cache size
 
-
-
+cache_size = 262144
 
 ## Use forced cache (always answer fast from cache, even if it is expired, then renew it)
 
@@ -355,12 +355,6 @@ cache_forced = true
 cache_persistent = true
 
 cache_filename = '/Users/anton/dev/dnscrypt-proxy.cache'
-
-
-
-## Cache size
-
-cache_size = 262144
 
 
 ## Minimum TTL for cached entries
