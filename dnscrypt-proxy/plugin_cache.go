@@ -48,8 +48,8 @@ func computeCacheKey(pluginsState *PluginsState, msg *dns.Msg) [32]byte {
 	return sum
 }
 
-func (cachedResponses *CachedResponses) LoadFromFile(cacheSize int) error {
-	loadFile, _ := os.Open("/Users/anton/dev/dnscrypt-proxy.cache")
+func (cachedResponses *CachedResponses) LoadFromFile(cacheFilename string, cacheSize int) error {
+	loadFile, _ := os.Open(cacheFilename)
 	defer loadFile.Close()
 
 	loadZip, err := gzip.NewReader(loadFile)
@@ -57,8 +57,6 @@ func (cachedResponses *CachedResponses) LoadFromFile(cacheSize int) error {
 	if err != nil {
 		return err
 	}
-
-	dlog.Notice("Loading cached responses from [/Users/anton/dev/dnscrypt-proxy.cache]")
 
 	dec := gob.NewDecoder(loadZip)
 	var keysnum int
@@ -68,15 +66,17 @@ func (cachedResponses *CachedResponses) LoadFromFile(cacheSize int) error {
 		return err
 	}
 
-	dlog.Notice(keysnum)
-
 	if keysnum > 0 {
+		dlog.Noticef("Loading %d cached responses from [%s]", keysnum, cacheFilename)
+
 		cachedResponses.Lock()
 		defer cachedResponses.Unlock()
+
 		if cachedResponses.cache == nil {
-			var err error
+
 			cachedResponses.cache, err = lru.NewARC(cacheSize)
 			cachedResponses.queue = make(map[[32]byte]bool)
+
 			if err != nil {
 				cachedResponses.Unlock()
 				return err
@@ -90,21 +90,32 @@ func (cachedResponses *CachedResponses) LoadFromFile(cacheSize int) error {
 			var packet []byte
 			var frequent bool
 
-			dec.Decode(&key)
-			dec.Decode(&expiration)
-			dec.Decode(&packet)
-			dec.Decode(&frequent)
+			dlog.Debugf("== Loading %d response of %d =====================", i+1, keysnum)
 
-			msg.Unpack(packet)
-
-			dlog.Debugf("\nQuestion: %s", msg.Question[0].Name)
-			dlog.Debug("==========================")
-			dlog.Debugf("Expiration date: %s", expiration)
-			for i := range msg.Answer {
-				dlog.Debugf("Answer: %s", msg.Answer[i])
+			err = dec.Decode(&key)
+			if err != nil {
+				return err
 			}
 
-			dlog.Debugf("TTL: %d", expiration.Sub(time.Now())/time.Second)
+			err = dec.Decode(&expiration)
+			if err != nil {
+				return err
+			}
+
+			err = dec.Decode(&packet)
+			if err != nil {
+				return err
+			}
+
+			err = dec.Decode(&frequent)
+			if err != nil {
+				return err
+			}
+
+			err = msg.Unpack(packet)
+			if err != nil {
+				return err
+			}
 
 			cachedResponse := CachedResponse{
 				expiration: expiration,
@@ -118,11 +129,13 @@ func (cachedResponses *CachedResponses) LoadFromFile(cacheSize int) error {
 			cachedResponses.cache.Add(key, cachedResponse)
 
 			if frequent {
-				dlog.Debugf("Frequent.")
+				dlog.Debugf("Question is [%s], frequent, expiration date: %s (TTL: %d)", msg.Question[0].Name, expiration, expiration.Sub(time.Now())/time.Second)
 				cachedResponses.cache.Add(key, cachedResponse)
-				cachedResponses.queue[key] = false
 			} else {
-				dlog.Debugf("Not frequent.")
+				dlog.Debugf("Question is [%s], non frequent, expiration date: %s (TTL: %d)", msg.Question[0].Name, expiration, expiration.Sub(time.Now())/time.Second)
+			}
+			for i := range msg.Answer {
+				dlog.Debugf("Answer: [%s]", msg.Answer[i])
 			}
 
 		}
@@ -131,14 +144,14 @@ func (cachedResponses *CachedResponses) LoadFromFile(cacheSize int) error {
 	return nil
 }
 
-func (cache *CachedResponses) SaveCache() error {
+func (cachedResponses *CachedResponses) SaveCache(cacheFilename string) error {
 	cachedResponses.RLock()
 	defer cachedResponses.RUnlock()
 
 	if cachedResponses.cache != nil && cachedResponses.cache.Len() > 0 {
 		dlog.Notice("Saving " + strconv.Itoa(cachedResponses.cache.Len()) + "cached responses")
 
-		saveFile, _ := os.Create("/Users/anton/dev/dnscrypt-proxy.cache")
+		saveFile, _ := os.Create(cacheFilename)
 		defer saveFile.Close()
 
 		saveZip := gzip.NewWriter(saveFile)
@@ -180,7 +193,7 @@ func (cache *CachedResponses) SaveCache() error {
 			}
 
 			qHash := computeCacheKey(nil, &msg)
-			_, queueExist := cache.queue[qHash]
+			_, queueExist := cachedResponses.queue[qHash]
 			err = enc.Encode(queueExist)
 			if err != nil {
 				return err
@@ -203,7 +216,7 @@ func (plugin *PluginCache) Description() string {
 	return "DNS cache (reader)."
 }
 
-func (plugin *PluginCache) Init(proxy *Proxy) error {
+func (plugin *PluginCache) Init(_ *Proxy) error {
 	return nil
 }
 
@@ -269,7 +282,10 @@ func (plugin *PluginCacheResponse) Description() string {
 }
 
 func (plugin *PluginCacheResponse) Init(proxy *Proxy) error {
-	cachedResponses.LoadFromFile(proxy.cacheSize)
+	err := cachedResponses.LoadFromFile(proxy.cacheFilename, proxy.cacheSize)
+	if err != nil {
+		dlog.Warnf("Error while loading cache from [%s]", proxy.cacheFilename)
+	}
 	return nil
 }
 

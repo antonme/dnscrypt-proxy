@@ -14,7 +14,6 @@ import (
 	stamps "github.com/jedisct1/go-dnsstamps"
 	"github.com/miekg/dns"
 	"golang.org/x/crypto/curve25519"
-	"hash/fnv"
 )
 
 type Proxy struct {
@@ -46,6 +45,8 @@ type Proxy struct {
 	pluginBlockUndelegated         bool
 	cache                          bool
 	cacheSize                      int
+	cacheForced                    bool
+	cachePersistent                bool
 	cacheNegMinTTL                 uint32
 	cacheNegMaxTTL                 uint32
 	cacheMinTTL                    uint32
@@ -55,6 +56,7 @@ type Proxy struct {
 	queryLogFile                   string
 	queryLogFormat                 string
 	queryLogIgnoredQtypes          []string
+	cacheFilename                  string
 	nxLogFile                      string
 	nxLogFormat                    string
 	blockNameFile                  string
@@ -88,12 +90,6 @@ type Proxy struct {
 	anonDirectCertFallback         bool
 	dns64Prefixes                  []string
 	dns64Resolvers                 []string
-}
-
-func hash(s string) uint32 {
-	h := fnv.New32a()
-	h.Write([]byte(s))
-	return h.Sum32()
 }
 
 func (proxy *Proxy) registerUDPListener(conn *net.UDPConn) {

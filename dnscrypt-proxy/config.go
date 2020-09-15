@@ -446,7 +446,11 @@ func ConfigLoad(proxy *Proxy, flags *ConfigFlags) error {
 	proxy.pluginBlockIPv6 = config.BlockIPv6
 	proxy.pluginBlockUnqualified = config.BlockUnqualified
 	proxy.pluginBlockUndelegated = config.BlockUndelegated
+
 	proxy.cache = config.Cache
+	proxy.cacheFilename = config.CacheFilename
+	proxy.cacheForced = config.CacheForced
+	proxy.cachePersistent = config.CachePersistent
 	proxy.cacheSize = config.CacheSize
 
 	if config.CacheNegTTL > 0 {
@@ -787,11 +791,15 @@ func (config *Config) loadSource(proxy *Proxy, requiredProps stamps.ServerInform
 	}
 	source, err := NewSource(cfgSourceName, proxy.xTransport, cfgSource.URLs, cfgSource.MinisignKeyStr, cfgSource.CacheFile, cfgSource.FormatStr, time.Duration(cfgSource.RefreshDelay)*time.Hour)
 	if err != nil {
-		if len(source.in) <= 0 {
-			dlog.Criticalf("Unable to retrieve source [%s]: [%s]", cfgSourceName, err)
+		if source != nil {
+			if len(source.in) <= 0 {
+				dlog.Criticalf("Unable to retrieve source [%s]: [%s]", cfgSourceName, err)
+				return err
+			}
+			dlog.Infof("Downloading [%s] failed: %v, using cache file to startup", source.name, err)
+		} else {
 			return err
 		}
-		dlog.Infof("Downloading [%s] failed: %v, using cache file to startup", source.name, err)
 	}
 	proxy.sources = append(proxy.sources, source)
 	registeredServers, err := source.Parse(cfgSource.Prefix)

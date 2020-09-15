@@ -14,7 +14,7 @@ import (
 type PluginsAction int
 
 const (
-	PluginsActionNone     = 0
+	//	PluginsActionNone     = 0               //Commented as it is never actually used
 	PluginsActionContinue = 1
 	PluginsActionDrop     = 2
 	PluginsActionReject   = 3
@@ -267,7 +267,7 @@ func (pluginsState *PluginsState) ApplyQueryPlugins(pluginsGlobals *PluginsGloba
 		return packet, err
 	}
 	if len(msg.Question) != 1 {
-		return packet, errors.New("Unexpected number of questions")
+		return packet, errors.New("unexpected number of questions")
 	}
 	qName, err := NormalizeQName(msg.Question[0].Name)
 	if err != nil {
@@ -358,7 +358,7 @@ func (pluginsState *PluginsState) ApplyLoggingPlugins(pluginsGlobals *PluginsGlo
 	pluginsState.requestEnd = time.Now()
 	questionMsg := pluginsState.questionMsg
 	if questionMsg == nil {
-		return errors.New("Question not found")
+		return errors.New("question not found")
 	}
 	pluginsGlobals.RLock()
 	defer pluginsGlobals.RUnlock()
