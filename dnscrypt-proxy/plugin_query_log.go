@@ -66,7 +66,7 @@ func (plugin *PluginQueryLog) Eval(pluginsState *PluginsState, msg *dns.Msg) err
 	}
 	qName := pluginsState.qName
 
-	if pluginsState.cacheHit && !pluginsState.cacheExpired {
+	if pluginsState.cacheHit && !pluginsState.forceRequest {
 		pluginsState.serverName = "-"
 		pluginsState.returnCode = PluginsReturnCodeCacheHit
 	} else if pluginsState.cacheHit {
@@ -91,7 +91,7 @@ func (plugin *PluginQueryLog) Eval(pluginsState *PluginsState, msg *dns.Msg) err
 	if !pluginsState.requestStart.IsZero() && !pluginsState.requestEnd.IsZero() {
 		requestDuration = pluginsState.requestEnd.Sub(pluginsState.requestStart)
 	}
-	if pluginsState.action == PluginsActionDrop && pluginsState.cacheExpired {
+	if pluginsState.action == PluginsActionDrop && pluginsState.forceRequest {
 		//		return nil
 		clientIPStr = "-"
 	}

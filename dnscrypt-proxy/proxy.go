@@ -471,7 +471,7 @@ func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string,
 		return
 	}
 	pluginsState := NewPluginsState(proxy, clientProto, clientAddr, serverProto, start)
-	pluginsState.cacheExpired = forceRequest
+	pluginsState.forceRequest = forceRequest
 	serverName := "-"
 	needsEDNS0Padding := false
 	serverInfo := proxy.serversInfo.getOne()
@@ -659,24 +659,20 @@ func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string,
 
 	pluginsState.ApplyLoggingPlugins(&proxy.pluginsGlobals)
 
-	if pluginsState.cacheExpired && pluginsState.action != PluginsActionPrefetch {
-		//	sleeptime:=time.Duration(rand.Intn(1000))*time.Millisecond
-		//	time.Sleep(sleeptime)
+	if pluginsState.forceRequest && pluginsState.action != PluginsActionPrefetch {
 		msg := dns.Msg{}
 		msg.Unpack(query)
-		//qName, _ := NormalizeQName(msg.Question[0].Name)
-		//var qHash uint32 = hash(qName)
 		var qHash = computeCacheKey(nil, &msg)
 
-		if !cachedResponses.queue[qHash] {
+		if !cachedResponses.fetchLock[qHash] {
 			cachedResponses.Lock()
-			cachedResponses.queue[qHash] = true
+			cachedResponses.fetchLock[qHash] = true
 			cachedResponses.Unlock()
 
 			proxy.processIncomingQuery("none", "none", query, clientAddr, clientPc, start, true)
 
 			cachedResponses.Lock()
-			cachedResponses.queue[qHash] = false
+			cachedResponses.fetchLock[qHash] = false
 			cachedResponses.Unlock()
 		}
 	}

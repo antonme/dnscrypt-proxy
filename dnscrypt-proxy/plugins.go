@@ -14,7 +14,7 @@ import (
 type PluginsAction int
 
 const (
-	//	PluginsActionNone     = 0               //Commented as it is never actually used
+	//PluginsActionNone   = 0               //Commented as it is never actually used
 	PluginsActionContinue = 1
 	PluginsActionDrop     = 2
 	PluginsActionReject   = 3
@@ -92,7 +92,8 @@ type PluginsState struct {
 	requestStart                     time.Time
 	requestEnd                       time.Time
 	cacheHit                         bool
-	cacheExpired                     bool
+	forceRequest                     bool
+	cacheForced                      bool
 	returnCode                       PluginsReturnCode
 	serverName                       string
 	serverProto                      string
@@ -244,6 +245,7 @@ func NewPluginsState(proxy *Proxy, clientProto string, clientAddr *net.Addr, ser
 		clientProto:                      clientProto,
 		clientAddr:                       clientAddr,
 		cacheSize:                        proxy.cacheSize,
+		cacheForced:                      proxy.cacheForced,
 		cacheNegMinTTL:                   proxy.cacheNegMinTTL,
 		cacheNegMaxTTL:                   proxy.cacheNegMaxTTL,
 		cacheMinTTL:                      proxy.cacheMinTTL,
@@ -257,7 +259,7 @@ func NewPluginsState(proxy *Proxy, clientProto string, clientAddr *net.Addr, ser
 		requestStart:                     start,
 		maxUnencryptedUDPSafePayloadSize: MaxDNSUDPSafePacketSize,
 		sessionData:                      make(map[string]interface{}),
-		cacheExpired:                     false,
+		forceRequest:                     false,
 	}
 }
 

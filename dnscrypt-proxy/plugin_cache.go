@@ -23,8 +23,8 @@ type CachedResponse struct {
 
 type CachedResponses struct {
 	sync.RWMutex
-	cache *lru.ARCCache
-	queue map[[32]byte]bool
+	cache     *lru.ARCCache
+	fetchLock map[[32]byte]bool
 }
 
 var cachedResponses CachedResponses
@@ -53,7 +53,6 @@ func (cachedResponses *CachedResponses) LoadFromFile(cacheFilename string, cache
 	defer loadFile.Close()
 
 	loadZip, err := gzip.NewReader(loadFile)
-
 	if err != nil {
 		return err
 	}
@@ -75,7 +74,7 @@ func (cachedResponses *CachedResponses) LoadFromFile(cacheFilename string, cache
 		if cachedResponses.cache == nil {
 
 			cachedResponses.cache, err = lru.NewARC(cacheSize)
-			cachedResponses.queue = make(map[[32]byte]bool)
+			cachedResponses.fetchLock = make(map[[32]byte]bool)
 
 			if err != nil {
 				cachedResponses.Unlock()
@@ -193,7 +192,7 @@ func (cachedResponses *CachedResponses) SaveCache(cacheFilename string) error {
 			}
 
 			qHash := computeCacheKey(nil, &msg)
-			_, queueExist := cachedResponses.queue[qHash]
+			_, queueExist := cachedResponses.fetchLock[qHash]
 			err = enc.Encode(queueExist)
 			if err != nil {
 				return err
@@ -204,6 +203,8 @@ func (cachedResponses *CachedResponses) SaveCache(cacheFilename string) error {
 	}
 	return nil
 }
+
+// ---
 
 type PluginCache struct {
 }
@@ -247,16 +248,13 @@ func (plugin *PluginCache) Eval(pluginsState *PluginsState, msg *dns.Msg) error 
 	synth.Compress = true
 	synth.Question = msg.Question
 
-	if time.Now().After(cached.expiration.Add(-1*time.Second)) && pluginsState.cacheExpired {
-		pluginsState.sessionData["stale"] = &synth
-		return nil
-	}
-
-	if time.Now().After(cached.expiration.Add(-1 * time.Second)) {
-		pluginsState.cacheExpired = true
-	}
-
-	if time.Now().Before(cached.expiration) {
+	if time.Now().After(cached.expiration) {
+		if pluginsState.cacheForced == false || pluginsState.forceRequest {
+			pluginsState.sessionData["stale"] = &synth
+			return nil
+		}
+		pluginsState.forceRequest = true
+	} else {
 		updateTTL(&cached.msg, cached.expiration)
 	}
 
@@ -282,9 +280,11 @@ func (plugin *PluginCacheResponse) Description() string {
 }
 
 func (plugin *PluginCacheResponse) Init(proxy *Proxy) error {
-	err := cachedResponses.LoadFromFile(proxy.cacheFilename, proxy.cacheSize)
-	if err != nil {
-		dlog.Warnf("Error while loading cache from [%s]", proxy.cacheFilename)
+	if proxy != nil && proxy.cachePersistent {
+		err := cachedResponses.LoadFromFile(proxy.cacheFilename, proxy.cacheSize)
+		if err != nil {
+			dlog.Warnf("Error while loading cache from [%s]", proxy.cacheFilename)
+		}
 	}
 	return nil
 }
@@ -317,7 +317,7 @@ func (plugin *PluginCacheResponse) Eval(pluginsState *PluginsState, msg *dns.Msg
 	if cachedResponses.cache == nil {
 		var err error
 		cachedResponses.cache, err = lru.NewARC(pluginsState.cacheSize)
-		cachedResponses.queue = make(map[[32]byte]bool)
+		cachedResponses.fetchLock = make(map[[32]byte]bool)
 
 		if err != nil {
 			cachedResponses.Unlock()
