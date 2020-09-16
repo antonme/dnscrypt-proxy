@@ -1,7 +1,7 @@
 package main
 
 import (
-	crypto_rand "crypto/rand"
+	cryptorand "crypto/rand"
 	"encoding/binary"
 	"net"
 	"os"
@@ -216,7 +216,7 @@ func (proxy *Proxy) addLocalDoHListener(listenAddrStr string) {
 
 func (proxy *Proxy) StartProxy() {
 	proxy.questionSizeEstimator = NewQuestionSizeEstimator()
-	if _, err := crypto_rand.Read(proxy.proxySecretKey[:]); err != nil {
+	if _, err := cryptorand.Read(proxy.proxySecretKey[:]); err != nil {
 		dlog.Fatal(err)
 	}
 	curve25519.ScalarBaseMult(&proxy.proxyPublicKey, &proxy.proxySecretKey)
@@ -662,7 +662,7 @@ func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string,
 	if pluginsState.forceRequest && pluginsState.action != PluginsActionPrefetch {
 		msg := dns.Msg{}
 		msg.Unpack(query)
-		var qHash = computeCacheKey(&pluginsState, &msg)
+		var qHash = computeCacheKey(nil, &msg)
 
 		if !cachedResponses.fetchLock[qHash] {
 			cachedResponses.Lock()

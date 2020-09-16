@@ -5,7 +5,6 @@ import (
 	"crypto/sha512"
 	"encoding/binary"
 	"encoding/gob"
-	"encoding/json"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/jedisct1/dlog"
 	"github.com/miekg/dns"
@@ -46,7 +45,7 @@ func computeCacheKey(pluginsState *PluginsState, msg *dns.Msg) [32]byte {
 	return sum
 }
 
-func (cachedResponses *CachedResponses) LoadFromFile(cacheFilename string, cacheSize int) error {
+func (cachedResponses *CachedResponses) LoadCache(cacheFilename string, cacheSize int) error {
 	loadFile, _ := os.Open(cacheFilename)
 	defer loadFile.Close()
 
@@ -141,12 +140,75 @@ func (cachedResponses *CachedResponses) LoadFromFile(cacheFilename string, cache
 	return nil
 }
 
+/*
 type SavedResponse struct {
 	Expiration time.Time
 	Frequent   bool
 	Msg        dns.Msg
 }
+func (cachedResponses *CachedResponses) LoadFromFileNew(cacheFilename string, cacheSize int) error {
+	loadFile, _ := os.Open(cacheFilename)
+	defer loadFile.Close()
 
+	loadZip, err := gzip.NewReader(loadFile)
+	if err != nil {
+		return err
+	}
+
+	dec := gob.NewDecoder(loadZip)
+
+	dlog.Noticef("Loading (new way) cached responses from [%s]", cacheFilename)
+
+	cachedResponses.Lock()
+	defer cachedResponses.Unlock()
+
+	if cachedResponses.cache == nil {
+
+		cachedResponses.cache, err = lru.NewARC(cacheSize)
+		cachedResponses.fetchLock = make(map[[32]byte]bool)
+
+		if err != nil {
+			cachedResponses.Unlock()
+			return err
+		}
+	}
+	i:=1
+	for {
+		var key [32]byte
+		var savedResponse SavedResponse
+
+		dlog.Debugf("== Loading %d response =====================", i)
+		i++
+		err = dec.Decode(&savedResponse)
+		if err != nil {
+			dlog.Warn(err)
+			return err
+		}
+
+		cachedResponse := CachedResponse{
+			Expiration: savedResponse.Expiration,
+			Msg:        savedResponse.Msg,
+		}
+
+		if time.Now().Before(cachedResponse.Expiration) {
+			updateTTL(&cachedResponse.Msg, cachedResponse.Expiration)
+		}
+
+		cachedResponses.cache.Add(key, cachedResponse)
+
+		if savedResponse.Frequent {
+			dlog.Debugf("Question is [%s], frequent, Expiration date: %s (TTL: %d)", savedResponse.Msg.Question[0].Name, savedResponse.Expiration, cachedResponse.Expiration.Sub(time.Now())/time.Second)
+			cachedResponses.cache.Add(key, cachedResponse)
+		} else {
+			dlog.Debugf("Question is [%s], not frequent, Expiration date: %s (TTL: %d)", savedResponse.Msg.Question[0].Name, savedResponse.Expiration, cachedResponse.Expiration.Sub(time.Now())/time.Second)
+		}
+
+	}
+	dlog.Noticef("Loaded (new way) %d cached responses", i)
+
+
+	return nil
+}
 func (cachedResponses *CachedResponses) SaveCacheNew(cacheFilename string) error {
 	cachedResponses.RLock()
 	defer cachedResponses.RUnlock()
@@ -155,13 +217,13 @@ func (cachedResponses *CachedResponses) SaveCacheNew(cacheFilename string) error
 
 		dlog.Noticef("Saving (new way) %d cached responses", cachedResponses.cache.Len())
 
-		saveFile, _ := os.Create(cacheFilename + ".new.gz")
+		saveFile, _ := os.Create(cacheFilename)
 		defer saveFile.Close()
 
 		saveZip := gzip.NewWriter(saveFile)
 		defer saveZip.Close()
 
-		enc := json.NewEncoder(saveZip)
+		enc := gob.NewEncoder(saveZip)
 
 		cachedResponses.RLock()
 		defer cachedResponses.RUnlock()
@@ -193,15 +255,11 @@ func (cachedResponses *CachedResponses) SaveCacheNew(cacheFilename string) error
 	}
 	return nil
 }
+*/
 
 func (cachedResponses *CachedResponses) SaveCache(cacheFilename string) error {
 	cachedResponses.RLock()
 	defer cachedResponses.RUnlock()
-
-	err := cachedResponses.SaveCacheNew(cacheFilename)
-	if err != nil {
-		return err
-	}
 
 	if cachedResponses.cache != nil && cachedResponses.cache.Len() > 0 {
 
@@ -339,9 +397,9 @@ func (plugin *PluginCacheResponse) Description() string {
 
 func (plugin *PluginCacheResponse) Init(proxy *Proxy) error {
 	if proxy != nil && proxy.cachePersistent {
-		err := cachedResponses.LoadFromFile(proxy.cacheFilename, proxy.cacheSize)
+		err := cachedResponses.LoadCache(proxy.cacheFilename, proxy.cacheSize)
 		if err != nil {
-			dlog.Warnf("Error while loading cache from [%s]", proxy.cacheFilename)
+			dlog.Warnf("Error while loading cache from [%s]: %s", proxy.cacheFilename, err)
 		}
 	}
 	return nil

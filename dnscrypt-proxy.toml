@@ -354,7 +354,7 @@ cache_forced = true
 
 cache_persistent = true
 
-cache_filename = '/Users/anton/dev/dnscrypt-proxy.cache'
+cache_filename = '/Users/anton/dev/dnscrypt-proxy.cache.gz'
 
 
 ## Minimum TTL for cached entries
