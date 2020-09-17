@@ -662,10 +662,12 @@ func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string,
 	if pluginsState.forceRequest && pluginsState.action != PluginsActionPrefetch {
 		msg := dns.Msg{}
 		msg.Unpack(query)
-		var qHash = computeCacheKey(&pluginsState, &msg)
+		qHash := computeCacheKey(&pluginsState, &msg)
+
+		cachedResponses.Lock()
+		defer cachedResponses.Unlock()
 
 		if !cachedResponses.fetchLock[qHash] {
-			cachedResponses.Lock()
 			cachedResponses.fetchLock[qHash] = true
 			cachedResponses.Unlock()
 
@@ -673,7 +675,6 @@ func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string,
 
 			cachedResponses.Lock()
 			cachedResponses.fetchLock[qHash] = false
-			cachedResponses.Unlock()
 		}
 	}
 
