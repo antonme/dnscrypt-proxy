@@ -126,7 +126,7 @@ func checkSourceCache(c *check.C, e *SourceTestExpect) {
 func loadSnakeoil(t *testing.T, d *SourceTestData) {
 	key, err := minisign.NewPublicKeyFromFile(filepath.Join("testdata", "snakeoil.pub"))
 	if err != nil {
-		t.Fatalf("Unable to load snakeoil key: %v", err)
+		t.Fatalf("Unable to load snakeoil Key: %v", err)
 	}
 	d.keyStr = string(bytes.SplitN(readFixture(t, "snakeoil.pub"), []byte("\n"), 2)[1])
 	d.key = &key
@@ -390,7 +390,7 @@ func TestNewSource(t *testing.T) {
 	}{
 		{"", "", 0, &SourceTestExpect{err: " ", Source: &Source{name: "short refresh delay", urls: []*url.URL{}, cacheTTL: DefaultPrefetchDelay, prefetchDelay: DefaultPrefetchDelay}}},
 		{"v1", d.keyStr, DefaultPrefetchDelay * 2, &SourceTestExpect{err: "Unsupported source format", Source: &Source{name: "old format", urls: []*url.URL{}, cacheTTL: DefaultPrefetchDelay * 2, prefetchDelay: DefaultPrefetchDelay}}},
-		{"v2", "", DefaultPrefetchDelay * 3, &SourceTestExpect{err: "Invalid encoded public key", Source: &Source{name: "invalid public key", urls: []*url.URL{}, cacheTTL: DefaultPrefetchDelay * 3, prefetchDelay: DefaultPrefetchDelay}}},
+		{"v2", "", DefaultPrefetchDelay * 3, &SourceTestExpect{err: "Invalid encoded public Key", Source: &Source{name: "invalid public Key", urls: []*url.URL{}, cacheTTL: DefaultPrefetchDelay * 3, prefetchDelay: DefaultPrefetchDelay}}},
 	} {
 		t.Run(tt.e.Source.name, func(t *testing.T) {
 			got, err := NewSource(tt.e.Source.name, d.xTransport, tt.e.urls, tt.key, tt.e.cachePath, tt.v, tt.refreshDelay)

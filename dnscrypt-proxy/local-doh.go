@@ -52,7 +52,7 @@ func (handler localDoHHandler) ServeHTTP(writer http.ResponseWriter, request *ht
 		writer.WriteHeader(400)
 		return
 	}
-	response := proxy.processIncomingQuery("local_doh", proxy.mainProto, packet, &xClientAddr, nil, start,false)
+	response := proxy.processIncomingQuery("local_doh", proxy.mainProto, packet, &xClientAddr, nil, start, false)
 	if len(response) == 0 {
 		writer.WriteHeader(500)
 		return
@@ -83,7 +83,7 @@ func (handler localDoHHandler) ServeHTTP(writer http.ResponseWriter, request *ht
 func (proxy *Proxy) localDoHListener(acceptPc *net.TCPListener) {
 	defer acceptPc.Close()
 	if len(proxy.localDoHCertFile) == 0 || len(proxy.localDoHCertKeyFile) == 0 {
-		dlog.Fatal("A certificate and a key are required to start a local DoH service")
+		dlog.Fatal("A certificate and a Key are required to start a local DoH service")
 	}
 	httpServer := &http.Server{
 		ReadTimeout:  proxy.timeout,

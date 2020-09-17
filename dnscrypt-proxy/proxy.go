@@ -662,7 +662,7 @@ func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string,
 	if pluginsState.forceRequest && pluginsState.action != PluginsActionPrefetch {
 		msg := dns.Msg{}
 		msg.Unpack(query)
-		var qHash = computeCacheKey(nil, &msg)
+		var qHash = computeCacheKey(&pluginsState, &msg)
 
 		if !cachedResponses.fetchLock[qHash] {
 			cachedResponses.Lock()

@@ -146,7 +146,7 @@ func (app *App) Stop(service service.Service) error {
 	if app.proxy.cachePersistent {
 		err := cachedResponses.SaveCache(app.proxy.cacheFilename)
 		if err != nil {
-			dlog.Fatal("Can't save cached responses to a file")
+			dlog.Fatalf("Can't save cached responses to a file: %s", err)
 		}
 	}
 

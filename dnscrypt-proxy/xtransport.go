@@ -163,7 +163,7 @@ func (xTransport *XTransport) rebuildTransport() {
 	if (clientCreds != DOHClientCreds{}) {
 		cert, err := tls.LoadX509KeyPair(clientCreds.clientCert, clientCreds.clientKey)
 		if err != nil {
-			dlog.Fatalf("Unable to use certificate [%v] (key: [%v]): %v", clientCreds.clientCert, clientCreds.clientKey, err)
+			dlog.Fatalf("Unable to use certificate [%v] (Key: [%v]): %v", clientCreds.clientCert, clientCreds.clientKey, err)
 		}
 		if clientCreds.rootCA != "" {
 			caCert, err := ioutil.ReadFile(clientCreds.rootCA)

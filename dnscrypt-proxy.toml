@@ -29,7 +29,7 @@
 ##
 ## Remove the leading # first to enable this; lines starting with # are ignored.
 
-server_names = ['cloudflare','google','meganerd','yandex']
+server_names = ['cloudflare']
 
 
 ## List of local addresses and ports to listen to. Can be IPv4 and/or IPv6.
@@ -354,7 +354,7 @@ cache_forced = true
 
 cache_persistent = true
 
-cache_filename = '/Users/anton/dev/dnscrypt-proxy.cache.gz'
+cache_filename = '/Users/anton/dev/dnscrypt-proxy.cache'
 
 
 ## Minimum TTL for cached entries

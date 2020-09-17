@@ -314,9 +314,9 @@ func fetchDNSCryptServerInfo(proxy *Proxy, name string, stamp stamps.ServerStamp
 	if len(stamp.ServerPk) != ed25519.PublicKeySize {
 		serverPk, err := hex.DecodeString(strings.Replace(string(stamp.ServerPk), ":", "", -1))
 		if err != nil || len(serverPk) != ed25519.PublicKeySize {
-			dlog.Fatalf("Unsupported public key for [%s]: [%s]", name, stamp.ServerPk)
+			dlog.Fatalf("Unsupported public Key for [%s]: [%s]", name, stamp.ServerPk)
 		}
-		dlog.Warnf("Public key [%s] shouldn't be hex-encoded any more", string(stamp.ServerPk))
+		dlog.Warnf("Public Key [%s] shouldn't be hex-encoded any more", string(stamp.ServerPk))
 		stamp.ServerPk = serverPk
 	}
 	knownBugs := ServerBugs{}

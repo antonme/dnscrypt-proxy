@@ -332,7 +332,7 @@ func ConfigLoad(proxy *Proxy, flags *ConfigFlags) error {
 	}
 	undecoded := md.Undecoded()
 	if len(undecoded) > 0 {
-		return fmt.Errorf("Unsupported key in configuration file: [%s]", undecoded[0])
+		return fmt.Errorf("Unsupported Key in configuration file: [%s]", undecoded[0])
 	}
 
 	proxy.logMaxSize = config.LogMaxSize
@@ -778,7 +778,7 @@ func (config *Config) loadSource(proxy *Proxy, requiredProps stamps.ServerInform
 		}
 	}
 	if cfgSource.MinisignKeyStr == "" {
-		return fmt.Errorf("Missing Minisign key for source [%s]", cfgSourceName)
+		return fmt.Errorf("Missing Minisign Key for source [%s]", cfgSourceName)
 	}
 	if cfgSource.CacheFile == "" {
 		return fmt.Errorf("Missing cache file for source [%s]", cfgSourceName)
