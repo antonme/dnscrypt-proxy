@@ -653,7 +653,7 @@ func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string,
 		}
 	}
 
-	if pluginsState.forceRequest != forceRequest {
+	if forceRequest && pluginsState.forceRequest != forceRequest {
 		pluginsState.returnCode = PluginsReturnCodePostfetch
 		pluginsState.ApplyLoggingPlugins(&proxy.pluginsGlobals)
 		return
