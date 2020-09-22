@@ -638,7 +638,7 @@ func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string,
 		} else {
 			proxy.questionSizeEstimator.adjust(ResponseOverhead + len(response))
 		}
-	} else if clientProto == "tcp" {
+	} else if clientProto == "tcp" || clientProto == "local_doh" {
 		response, err = PrefixWithSize(response)
 		if err != nil {
 			pluginsState.returnCode = PluginsReturnCodeParseError
