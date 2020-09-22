@@ -638,7 +638,7 @@ func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string,
 		} else {
 			proxy.questionSizeEstimator.adjust(ResponseOverhead + len(response))
 		}
-	} else if clientProto == "tcp" || clientProto == "local_doh" {
+	} else if clientProto == "tcp" {
 		response, err = PrefixWithSize(response)
 		if err != nil {
 			pluginsState.returnCode = PluginsReturnCodeParseError
@@ -651,7 +651,9 @@ func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string,
 		if clientPc != nil {
 			clientPc.Write(response)
 		}
-	} else {
+	}
+
+	if pluginsState.forceRequest != forceRequest {
 		pluginsState.returnCode = PluginsReturnCodePostfetch
 		pluginsState.ApplyLoggingPlugins(&proxy.pluginsGlobals)
 		return

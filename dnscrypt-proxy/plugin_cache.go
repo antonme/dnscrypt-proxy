@@ -295,9 +295,8 @@ func (plugin *PluginCache) Eval(pluginsState *PluginsState, msg *dns.Msg) error 
 			return nil
 		}
 		pluginsState.forceRequest = true
-	} else {
-		updateTTL(&cached.msg, cached.expiration)
 	}
+	updateTTL(&cached.msg, cached.expiration)
 
 	pluginsState.synthResponse = &synth
 	pluginsState.action = PluginsReturnCodeSynth
