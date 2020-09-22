@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"encoding/gob"
 	"encoding/json"
+	"fmt"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/jedisct1/dlog"
 	"github.com/miekg/dns"
@@ -94,6 +95,9 @@ func (cachedResponses *CachedResponses) LoadCache(cacheFilename string, cacheSiz
 	if err != nil {
 		return err
 	}
+	if header.ProtoVersion != 1 {
+		return fmt.Errorf("unknown protocol version [%d]", header.ProtoVersion)
+	}
 
 	if header.ItemsCount > 0 {
 		dlog.Noticef("Loading %d cached responses from [%s]", header.ItemsCount, cacheFilename)
@@ -143,7 +147,7 @@ func (cachedResponses *CachedResponses) LoadCache(cacheFilename string, cacheSiz
 			if startTime.Before(cachedResponse.expiration) {
 				updateTTL(&msg, cachedResponse.expiration)
 			}
-
+			//cachedKey := 16
 			cachedKey := computeCacheKey(nil, &msg)
 			cachedResponses.cache.Add(cachedKey, cachedResponse)
 
@@ -162,7 +166,7 @@ func (cachedResponses *CachedResponses) LoadCache(cacheFilename string, cacheSiz
 	return nil
 }
 
-func (cachedResponses *CachedResponses) SaveCache(cacheFilename string) error {
+func (cachedResponses *CachedResponses) SaveCache(cacheFilename string) (err error) {
 	startTime := time.Now()
 	cachedResponses.RLock()
 	defer cachedResponses.RUnlock()
@@ -175,7 +179,12 @@ func (cachedResponses *CachedResponses) SaveCache(cacheFilename string) error {
 		defer saveFile.Close()
 
 		saveBuf := bufio.NewWriter(saveFile)
-		defer saveBuf.Flush()
+		defer func() {
+			ferr := saveBuf.Flush()
+			if ferr != nil {
+				err = ferr
+			}
+		}()
 
 		enc := gob.NewEncoder(saveBuf)
 
@@ -196,7 +205,7 @@ func (cachedResponses *CachedResponses) SaveCache(cacheFilename string) error {
 		cachedResponses.RLock()
 		defer cachedResponses.RUnlock()
 
-		err := jenc.Encode(header)
+		err = jenc.Encode(header)
 		if err != nil {
 			return err
 		}

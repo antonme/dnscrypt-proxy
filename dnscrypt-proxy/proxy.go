@@ -667,11 +667,11 @@ func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string,
 		cachedResponses.Lock()
 		defer cachedResponses.Unlock()
 
-		if !cachedResponses.fetchLock[qHash] {
+		if cachedResponses.fetchLock[qHash] != true {
 			cachedResponses.fetchLock[qHash] = true
 			cachedResponses.Unlock()
 
-			proxy.processIncomingQuery("none", "none", query, clientAddr, clientPc, start, true)
+			proxy.processIncomingQuery(clientProto, serverProto, query, clientAddr, clientPc, start, true)
 
 			cachedResponses.Lock()
 			cachedResponses.fetchLock[qHash] = false

@@ -27,29 +27,29 @@ const (
 )
 
 type Config struct {
-	LogLevel                 int            `toml:"log_level"`
-	LogFile                  *string        `toml:"log_file"`
-	LogFileLatest            bool           `toml:"log_file_latest"`
-	UseSyslog                bool           `toml:"use_syslog"`
-	ServerNames              []string       `toml:"server_names"`
-	DisabledServerNames      []string       `toml:"disabled_server_names"`
-	ListenAddresses          []string       `toml:"listen_addresses"`
-	LocalDoH                 LocalDoHConfig `toml:"local_doh"`
-	Daemonize                bool
-	UserName                 string `toml:"user_name"`
-	ForceTCP                 bool   `toml:"force_tcp"`
-	Timeout                  int    `toml:"timeout"`
-	KeepAlive                int    `toml:"keepalive"`
-	Proxy                    string `toml:"proxy"`
-	CertRefreshDelay         int    `toml:"cert_refresh_delay"`
-	CertIgnoreTimestamp      bool   `toml:"cert_ignore_timestamp"`
-	EphemeralKeys            bool   `toml:"dnscrypt_ephemeral_keys"`
-	LBStrategy               string `toml:"lb_strategy"`
-	LBEstimator              bool   `toml:"lb_estimator"`
-	BlockIPv6                bool   `toml:"block_ipv6"`
-	BlockUnqualified         bool   `toml:"block_unqualified"`
-	BlockUndelegated         bool   `toml:"block_undelegated"`
-	Cache                    bool
+	LogLevel                 int                         `toml:"log_level"`
+	LogFile                  *string                     `toml:"log_file"`
+	LogFileLatest            bool                        `toml:"log_file_latest"`
+	UseSyslog                bool                        `toml:"use_syslog"`
+	ServerNames              []string                    `toml:"server_names"`
+	DisabledServerNames      []string                    `toml:"disabled_server_names"`
+	ListenAddresses          []string                    `toml:"listen_addresses"`
+	LocalDoH                 LocalDoHConfig              `toml:"local_doh"`
+	Daemonize                bool                        ``
+	UserName                 string                      `toml:"user_name"`
+	ForceTCP                 bool                        `toml:"force_tcp"`
+	Timeout                  int                         `toml:"timeout"`
+	KeepAlive                int                         `toml:"keepalive"`
+	Proxy                    string                      `toml:"proxy"`
+	CertRefreshDelay         int                         `toml:"cert_refresh_delay"`
+	CertIgnoreTimestamp      bool                        `toml:"cert_ignore_timestamp"`
+	EphemeralKeys            bool                        `toml:"dnscrypt_ephemeral_keys"`
+	LBStrategy               string                      `toml:"lb_strategy"`
+	LBEstimator              bool                        `toml:"lb_estimator"`
+	BlockIPv6                bool                        `toml:"block_ipv6"`
+	BlockUnqualified         bool                        `toml:"block_unqualified"`
+	BlockUndelegated         bool                        `toml:"block_undelegated"`
+	Cache                    bool                        `toml:"cache"`
 	CacheForced              bool                        `toml:"cache_forced"`
 	CachePersistent          bool                        `toml:"cache_persistent"`
 	CacheFilename            string                      `toml:"cache_filename"`

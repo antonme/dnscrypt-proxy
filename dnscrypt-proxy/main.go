@@ -69,7 +69,7 @@ func main() {
 	svcConfig := &service.Config{
 		Name:             "dnscrypt-proxy-home",
 		DisplayName:      "DNSCrypt client proxy",
-		Description:      "Encrypted/authenticated DNS proxy by @dnscrypt. With some additional featuref by @antonme",
+		Description:      "Encrypted/authenticated DNS proxy by @dnscrypt. With some additional features by @antonme",
 		WorkingDirectory: pwd,
 		Arguments:        []string{"-config", *flags.ConfigFile},
 	}

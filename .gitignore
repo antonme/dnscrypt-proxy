@@ -10,6 +10,7 @@
 .DS_Store
 dnscrypt-proxy/dnscrypt-proxy2
 dnscrypt-proxy/dnscrypt-proxy
+dnscrypt-proxy.
 dnscrypt-proxy/*-resolvers.md*
 *-resolvers.md*
 relays.md*
