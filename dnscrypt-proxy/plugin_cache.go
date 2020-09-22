@@ -366,6 +366,7 @@ func (plugin *PluginCacheResponse) Eval(pluginsState *PluginsState, msg *dns.Msg
 	}
 	cachedResponses.cache.Add(cacheKey, cachedResponse)
 	cachedResponses.Unlock()
+	pluginsState.forceRequest = false
 
 	updateTTL(msg, cachedResponse.expiration)
 
