@@ -272,6 +272,14 @@ func (plugin *PluginCache) Reload() error {
 
 func (plugin *PluginCache) Eval(pluginsState *PluginsState, msg *dns.Msg) error {
 	cacheKey := computeCacheKey(pluginsState, msg)
+	qType, ok := dns.TypeToString[msg.Question[0].Qtype]
+	if !ok {
+		qType = string(qType)
+	}
+	forcedQType := false
+	if qType == "A" || qType == "AAAA" {
+		forcedQType = true
+	}
 	cachedResponses.RLock()
 	defer cachedResponses.RUnlock()
 	if cachedResponses.cache == nil {
@@ -290,7 +298,7 @@ func (plugin *PluginCache) Eval(pluginsState *PluginsState, msg *dns.Msg) error 
 	synth.Question = msg.Question
 
 	if time.Now().After(cached.expiration) {
-		if pluginsState.cacheForced == false || pluginsState.forceRequest {
+		if pluginsState.cacheForced == false || pluginsState.forceRequest || forcedQType == false {
 			pluginsState.sessionData["stale"] = &synth
 			return nil
 		}
