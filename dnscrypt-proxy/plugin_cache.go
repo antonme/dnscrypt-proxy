@@ -272,25 +272,18 @@ func (plugin *PluginCache) Reload() error {
 }
 
 func (plugin *PluginCache) Eval(pluginsState *PluginsState, msg *dns.Msg) error {
+	if strings.HasPrefix(msg.Question[0].Name, "flush\\@") {
+		return nil
+	}
 	cacheKey := computeCacheKey(pluginsState, msg)
 	qType, ok := dns.TypeToString[msg.Question[0].Qtype]
 	if !ok {
 		qType = string(qType)
 	}
-	forcedQType := false
-	if qType == "A" || qType == "AAAA" {
-		forcedQType = true
-	}
 
 	cachedResponses.RLock()
 	defer cachedResponses.RUnlock()
 	if cachedResponses.cache == nil {
-		return nil
-	}
-	quest := msg.Question[0].Name
-
-	if strings.Index(quest, "flush\\@") == 0 {
-
 		return nil
 	}
 
@@ -307,7 +300,7 @@ func (plugin *PluginCache) Eval(pluginsState *PluginsState, msg *dns.Msg) error 
 	synth.Question = msg.Question
 
 	if time.Now().After(cached.expiration) {
-		if pluginsState.cacheForced == false || pluginsState.forceRequest || forcedQType == false {
+		if pluginsState.cacheForced == false || pluginsState.forceRequest || strings.HasPrefix(msg.Question[0].Name, "_esni") {
 			pluginsState.sessionData["stale"] = &synth
 			return nil
 		}
@@ -362,22 +355,22 @@ func (plugin *PluginCacheResponse) Eval(pluginsState *PluginsState, msg *dns.Msg
 		return nil
 	}
 
-	cacheKey := computeCacheKey(pluginsState, msg)
-	ttl := getMinTTL(msg, pluginsState.cacheMinTTL, pluginsState.cacheMaxTTL, pluginsState.cacheNegMinTTL, pluginsState.cacheNegMaxTTL)
-
 	quest := msg.Question[0].Name
-	if strings.Index(quest, "flush\\@") == 0 {
-		dlog.Infof("Need to flush [%s] :: [%msgs]", msg.Question[0].Name, quest[7:])
-		pluginsState.forceRequest = true
+	if strings.HasPrefix(quest, "flush\\@") {
 		msg.Question[0].Name = quest[7:]
+
 		cacheKey := computeCacheKey(pluginsState, msg)
-		msg.Question[0].Name = quest
 		cachedResponses.Lock()
-		defer cachedResponses.Unlock()
 		cachedResponses.cache.Remove(cacheKey)
+		cachedResponses.Unlock()
+		msg.Question[0].Name = quest
+
 		pluginsState.action = PluginsActionFlush
 		return nil
 	}
+
+	cacheKey := computeCacheKey(pluginsState, msg)
+	ttl := getMinTTL(msg, pluginsState.cacheMinTTL, pluginsState.cacheMaxTTL, pluginsState.cacheNegMinTTL, pluginsState.cacheNegMaxTTL)
 
 	pluginsState.cachedTTL = ttl
 	cachedResponse := CachedResponse{

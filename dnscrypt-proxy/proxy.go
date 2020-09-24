@@ -6,7 +6,6 @@ import (
 	"net"
 	"os"
 	"runtime"
-	"strings"
 	"sync/atomic"
 	"time"
 
@@ -654,7 +653,7 @@ func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string,
 		}
 	}
 
-	if forceRequest && pluginsState.forceRequest != forceRequest {
+	if forceRequest && !pluginsState.forceRequest {
 		pluginsState.returnCode = PluginsReturnCodePostfetch
 		pluginsState.ApplyLoggingPlugins(&proxy.pluginsGlobals)
 		return
@@ -662,16 +661,9 @@ func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string,
 
 	pluginsState.ApplyLoggingPlugins(&proxy.pluginsGlobals)
 
-	if pluginsState.forceRequest && pluginsState.action != PluginsActionPostfetch {
+	if pluginsState.forceRequest && !forceRequest {
 		msg := dns.Msg{}
 		msg.Unpack(query)
-
-		quest := msg.Question[0].Name
-		if strings.Index(quest, "flush\\@") == 0 {
-			dlog.Infof("!!! [%s] :: [%s]", msg.Question[0].Name, quest[7:])
-			msg.Question[0].Name = quest[7:]
-			query, _ = msg.PackBuffer(query)
-		}
 
 		qHash := computeCacheKey(&pluginsState, &msg)
 
