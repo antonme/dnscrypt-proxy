@@ -282,7 +282,7 @@ func (proxy *Proxy) udpListener(clientPc *net.UDPConn) {
 				return
 			}
 			defer proxy.clientsCountDec()
-			proxy.processIncomingQuery("udp", proxy.mainProto, packet, &clientAddr, clientPc, start, false)
+			proxy.processIncomingQuery("udp", proxy.mainProto, packet, &clientAddr, clientPc, start)
 		}()
 	}
 }
@@ -320,7 +320,7 @@ func (proxy *Proxy) tcpListener(acceptPc *net.TCPListener) {
 				return
 			}
 			clientAddr := clientPc.RemoteAddr()
-			proxy.processIncomingQuery("tcp", "tcp", packet, &clientAddr, clientPc, start, false)
+			proxy.processIncomingQuery("tcp", "tcp", packet, &clientAddr, clientPc, start)
 		}()
 	}
 }
@@ -466,7 +466,11 @@ func (proxy *Proxy) clientsCountDec() {
 	}
 }
 
-func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string, query []byte, clientAddr *net.Addr, clientPc net.Conn, start time.Time, forceRequest bool) (response []byte) {
+func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string, query []byte, clientAddr *net.Addr, clientPc net.Conn, start time.Time) (response []byte) {
+	return proxy.processIncomingQueryEx(clientProto, serverProto, query, clientAddr, clientPc, start, false)
+}
+
+func (proxy *Proxy) processIncomingQueryEx(clientProto string, serverProto string, query []byte, clientAddr *net.Addr, clientPc net.Conn, start time.Time, forceRequest bool) (response []byte) {
 	if len(query) < MinDNSPacketSize {
 		return
 	}
@@ -661,7 +665,7 @@ func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string,
 
 	pluginsState.ApplyLoggingPlugins(&proxy.pluginsGlobals)
 
-	if pluginsState.forceRequest && !forceRequest {
+	if pluginsState.forceRequest && pluginsState.action != PluginsActionPostfetch {
 		msg := dns.Msg{}
 		msg.Unpack(query)
 
@@ -674,7 +678,7 @@ func (proxy *Proxy) processIncomingQuery(clientProto string, serverProto string,
 			cachedResponses.fetchLock[qHash] = true
 			cachedResponses.Unlock()
 
-			proxy.processIncomingQuery(clientProto, serverProto, query, clientAddr, clientPc, start, true)
+			proxy.processIncomingQueryEx(clientProto, serverProto, query, clientAddr, clientPc, start, true)
 
 			cachedResponses.Lock()
 			cachedResponses.fetchLock[qHash] = false
