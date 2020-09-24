@@ -95,6 +95,7 @@ type PluginsState struct {
 	cacheHit                         bool
 	forceRequest                     bool
 	cacheForced                      bool
+	flushEnabled                     bool
 	returnCode                       PluginsReturnCode
 	serverName                       string
 	serverProto                      string
@@ -247,6 +248,7 @@ func NewPluginsState(proxy *Proxy, clientProto string, clientAddr *net.Addr, ser
 		clientAddr:                       clientAddr,
 		cacheSize:                        proxy.cacheSize,
 		cacheForced:                      proxy.cacheForced,
+		flushEnabled:                     proxy.cacheFlushEnabled,
 		cacheNegMinTTL:                   proxy.cacheNegMinTTL,
 		cacheNegMaxTTL:                   proxy.cacheNegMaxTTL,
 		cacheMinTTL:                      proxy.cacheMinTTL,

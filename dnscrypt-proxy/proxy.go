@@ -46,6 +46,7 @@ type Proxy struct {
 	cache                          bool
 	cacheSize                      int
 	cacheForced                    bool
+	cacheFlushEnabled              bool
 	cachePersistent                bool
 	cacheNegMinTTL                 uint32
 	cacheNegMaxTTL                 uint32

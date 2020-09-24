@@ -53,6 +53,7 @@ type Config struct {
 	CacheForced              bool                        `toml:"cache_forced"`
 	CachePersistent          bool                        `toml:"cache_persistent"`
 	CacheFilename            string                      `toml:"cache_filename"`
+	CacheFlushEnabled        bool                        `toml:"cache_flush_command"`
 	CacheSize                int                         `toml:"cache_size"`
 	CacheNegTTL              uint32                      `toml:"cache_neg_ttl"`
 	CacheNegMinTTL           uint32                      `toml:"cache_neg_min_ttl"`
@@ -452,6 +453,7 @@ func ConfigLoad(proxy *Proxy, flags *ConfigFlags) error {
 	proxy.cacheForced = config.CacheForced
 	proxy.cachePersistent = config.CachePersistent
 	proxy.cacheSize = config.CacheSize
+	proxy.cacheFlushEnabled = config.CacheFlushEnabled
 
 	if config.CacheNegTTL > 0 {
 		proxy.cacheNegMinTTL = config.CacheNegTTL
@@ -467,6 +469,17 @@ func ConfigLoad(proxy *Proxy, flags *ConfigFlags) error {
 	proxy.cloakTTL = config.CloakTTL
 
 	proxy.queryMeta = config.QueryMeta
+
+	if len(config.EDNSClientSubnet) != 0 {
+		proxy.ednsClientSubnets = make([]*net.IPNet, 0)
+		for _, cidr := range config.EDNSClientSubnet {
+			_, netclient, err := net.ParseCIDR(cidr)
+			if err != nil {
+				return fmt.Errorf("Invalid EDNS-client-subnet CIDR: [%v]", cidr)
+			}
+			proxy.ednsClientSubnets = append(proxy.ednsClientSubnets, netclient)
+		}
+	}
 
 	if len(config.QueryLog.Format) == 0 {
 		config.QueryLog.Format = "tsv"

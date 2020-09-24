@@ -272,7 +272,7 @@ func (plugin *PluginCache) Reload() error {
 }
 
 func (plugin *PluginCache) Eval(pluginsState *PluginsState, msg *dns.Msg) error {
-	if strings.HasPrefix(msg.Question[0].Name, "flush\\@") {
+	if pluginsState.flushEnabled && strings.HasPrefix(msg.Question[0].Name, "flush\\@") {
 		return nil
 	}
 	cacheKey := computeCacheKey(pluginsState, msg)
@@ -356,7 +356,7 @@ func (plugin *PluginCacheResponse) Eval(pluginsState *PluginsState, msg *dns.Msg
 	}
 
 	quest := msg.Question[0].Name
-	if strings.HasPrefix(quest, "flush\\@") {
+	if pluginsState.flushEnabled && strings.HasPrefix(quest, "flush\\@") {
 		msg.Question[0].Name = quest[7:]
 
 		cacheKey := computeCacheKey(pluginsState, msg)
