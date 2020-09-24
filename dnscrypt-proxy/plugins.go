@@ -15,11 +15,12 @@ type PluginsAction int
 
 const (
 	//PluginsActionNone   = 0               //Commented as it is never actually used
-	PluginsActionContinue = 1
-	PluginsActionDrop     = 2
-	PluginsActionReject   = 3
-	PluginsActionSynth    = 4
-	PluginsActionPrefetch = 5
+	PluginsActionContinue  = 1
+	PluginsActionDrop      = 2
+	PluginsActionReject    = 3
+	PluginsActionSynth     = 4
+	PluginsActionPostfetch = 5
+	PluginsActionFlush     = 6
 )
 
 type PluginsGlobals struct {
@@ -292,7 +293,7 @@ func (pluginsState *PluginsState) ApplyQueryPlugins(pluginsGlobals *PluginsGloba
 			synth := RefusedResponseFromMessage(&msg, pluginsGlobals.refusedCodeInResponses, pluginsGlobals.respondWithIPv4, pluginsGlobals.respondWithIPv6, pluginsState.rejectTTL)
 			pluginsState.synthResponse = synth
 		}
-		if pluginsState.action != PluginsActionContinue && pluginsState.action != PluginsActionPrefetch {
+		if pluginsState.action != PluginsActionContinue && pluginsState.action != PluginsActionPostfetch {
 			break
 		}
 	}
@@ -337,6 +338,10 @@ func (pluginsState *PluginsState) ApplyResponsePlugins(pluginsGlobals *PluginsGl
 		}
 		if pluginsState.action == PluginsActionReject {
 			synth := RefusedResponseFromMessage(&msg, pluginsGlobals.refusedCodeInResponses, pluginsGlobals.respondWithIPv4, pluginsGlobals.respondWithIPv6, pluginsState.rejectTTL)
+			pluginsState.synthResponse = synth
+		}
+		if pluginsState.action == PluginsActionFlush {
+			synth := FlushedResponseFromMessage(&msg, pluginsGlobals.refusedCodeInResponses, pluginsGlobals.respondWithIPv4, pluginsGlobals.respondWithIPv6, pluginsState.rejectTTL)
 			pluginsState.synthResponse = synth
 		}
 		if pluginsState.action != PluginsActionContinue {

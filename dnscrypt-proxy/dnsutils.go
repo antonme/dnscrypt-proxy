@@ -37,7 +37,7 @@ func TruncatedResponse(packet []byte) ([]byte, error) {
 	return dstMsg.Pack()
 }
 
-func RefusedResponseFromMessage(srcMsg *dns.Msg, refusedCode bool, ipv4 net.IP, ipv6 net.IP, ttl uint32) *dns.Msg {
+func TextResponseFromMessage(srcMsg *dns.Msg, refusedCode bool, ipv4 net.IP, ipv6 net.IP, ttl uint32, textMessage string) *dns.Msg {
 	dstMsg := EmptyResponseFromMessage(srcMsg)
 	if refusedCode {
 		dstMsg.Rcode = dns.RcodeRefused
@@ -72,12 +72,20 @@ func RefusedResponseFromMessage(srcMsg *dns.Msg, refusedCode bool, ipv4 net.IP, 
 			hinfo := new(dns.HINFO)
 			hinfo.Hdr = dns.RR_Header{Name: question.Name, Rrtype: dns.TypeHINFO,
 				Class: dns.ClassINET, Ttl: 1}
-			hinfo.Cpu = "This query has been locally blocked"
-			hinfo.Os = "by dnscrypt-proxy"
+			hinfo.Cpu = textMessage
+			hinfo.Os = "by dnscrypt-proxy-home"
 			dstMsg.Answer = []dns.RR{hinfo}
 		}
 	}
 	return dstMsg
+}
+
+func FlushedResponseFromMessage(srcMsg *dns.Msg, refusedCode bool, ipv4 net.IP, ipv6 net.IP, ttl uint32) *dns.Msg {
+	return TextResponseFromMessage(srcMsg, refusedCode, ipv4, ipv6, ttl, "Local cache flushed for the FQDN from this query")
+}
+
+func RefusedResponseFromMessage(srcMsg *dns.Msg, refusedCode bool, ipv4 net.IP, ipv6 net.IP, ttl uint32) *dns.Msg {
+	return TextResponseFromMessage(srcMsg, refusedCode, ipv4, ipv6, ttl, "This query has been locally blocked")
 }
 
 func HasTCFlag(packet []byte) bool {

@@ -12,6 +12,7 @@ import (
 	"github.com/miekg/dns"
 	"io"
 	"os"
+	"strings"
 	"sync"
 	"time"
 )
@@ -280,11 +281,19 @@ func (plugin *PluginCache) Eval(pluginsState *PluginsState, msg *dns.Msg) error 
 	if qType == "A" || qType == "AAAA" {
 		forcedQType = true
 	}
+
 	cachedResponses.RLock()
 	defer cachedResponses.RUnlock()
 	if cachedResponses.cache == nil {
 		return nil
 	}
+	quest := msg.Question[0].Name
+
+	if strings.Index(quest, "flush\\@") == 0 {
+
+		return nil
+	}
+
 	cachedAny, ok := cachedResponses.cache.Get(cacheKey)
 	if !ok {
 		return nil
@@ -352,8 +361,23 @@ func (plugin *PluginCacheResponse) Eval(pluginsState *PluginsState, msg *dns.Msg
 	if msg.Truncated {
 		return nil
 	}
+
 	cacheKey := computeCacheKey(pluginsState, msg)
 	ttl := getMinTTL(msg, pluginsState.cacheMinTTL, pluginsState.cacheMaxTTL, pluginsState.cacheNegMinTTL, pluginsState.cacheNegMaxTTL)
+
+	quest := msg.Question[0].Name
+	if strings.Index(quest, "flush\\@") == 0 {
+		dlog.Infof("Need to flush [%s] :: [%msgs]", msg.Question[0].Name, quest[7:])
+		pluginsState.forceRequest = true
+		msg.Question[0].Name = quest[7:]
+		cacheKey := computeCacheKey(pluginsState, msg)
+		msg.Question[0].Name = quest
+		cachedResponses.Lock()
+		defer cachedResponses.Unlock()
+		cachedResponses.cache.Remove(cacheKey)
+		pluginsState.action = PluginsActionFlush
+		return nil
+	}
 
 	pluginsState.cachedTTL = ttl
 	cachedResponse := CachedResponse{
