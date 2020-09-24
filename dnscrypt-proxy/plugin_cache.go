@@ -276,10 +276,6 @@ func (plugin *PluginCache) Eval(pluginsState *PluginsState, msg *dns.Msg) error 
 		return nil
 	}
 	cacheKey := computeCacheKey(pluginsState, msg)
-	qType, ok := dns.TypeToString[msg.Question[0].Qtype]
-	if !ok {
-		qType = string(qType)
-	}
 
 	cachedResponses.RLock()
 	defer cachedResponses.RUnlock()

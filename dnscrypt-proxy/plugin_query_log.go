@@ -45,12 +45,20 @@ func (plugin *PluginQueryLog) Reload() error {
 func (plugin *PluginQueryLog) Eval(pluginsState *PluginsState, msg *dns.Msg) error {
 	question := msg.Question[0]
 	qType, ok := dns.TypeToString[question.Qtype]
+
 	if !ok {
-		qType = string(qType)
+		switch question.Qtype { //Until miekg/dns get updated to support SVCB
+		case 65:
+			qType = "HTTPS"
+		case 64:
+			qType = "SVCB"
+		case 63:
+			qType = "ZONEMD"
+		default:
+			qType = string(question.Qtype)
+		}
 	}
-	if qType == "" {
-		qType = "-"
-	}
+
 	if len(plugin.ignoredQtypes) > 0 {
 		for _, ignoredQtype := range plugin.ignoredQtypes {
 			if strings.EqualFold(ignoredQtype, qType) {
