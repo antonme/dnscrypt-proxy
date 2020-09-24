@@ -1,3 +1,29 @@
+# dnscrypt-proxy-home 2
+
+Patched version of dnscrypt-proxy with some additional features. This features are mostly for local home use, and some of them may be a bit dangerous for using in public spaces.
+
+### New features:
+
+  * #### Permanent cache
+    Save cache into a file on exit and load it back on start — so that restart will not neccessarily mean you lose all cache. Configured by `cache_persistent` and `cache_filename` options in config file
+
+  * #### Forced cache mode
+    Always answer from cache, even if it is expired. After answerring from expired cache, update cache even without request. As a result, we almost always answer in 0ms and the cache entries will not really be that old. Makes a big difference with high-latency connections (and on a very fast ones too). Configured by `cache_forced` and `cache_forced_ttl` options
+
+  * #### Flush single entry
+    Send `flush@github.com` query to remove `github.com` from the cache. Very useful for debugging, but may be dangerous in public places
+    
+  * #### Log file additions
+    There are new types of responce in a log files: 
+      - `CACHE_HIT` - answered from cache
+      - `FORCED_CACHE` - answered from a cache that has already expired
+      - `POSTFETCH` - auto-query to update cache after `FORCED_CACHE`
+     Also, received TTL are now written to a log file.
+     
+   * #### Beautifier for a log file
+     Makes monitoring a log file a bit more easy
+     PICTURE TO BE
+
 # ![dnscrypt-proxy 2](https://raw.github.com/dnscrypt/dnscrypt-proxy/master/logo.png?3)
 
 [![Financial Contributors on Open Collective](https://opencollective.com/dnscrypt/all/badge.svg?label=financial+contributors)](https://opencollective.com/dnscrypt)
