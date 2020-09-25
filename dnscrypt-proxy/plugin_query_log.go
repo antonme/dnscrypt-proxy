@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strconv"
 	"strings"
 	"time"
 
@@ -55,7 +56,7 @@ func (plugin *PluginQueryLog) Eval(pluginsState *PluginsState, msg *dns.Msg) err
 		case 63:
 			qType = "ZONEMD"
 		default:
-			qType = string(question.Qtype)
+			qType = strconv.FormatUint(uint64(question.Qtype), 10)
 		}
 	}
 
@@ -66,7 +67,7 @@ func (plugin *PluginQueryLog) Eval(pluginsState *PluginsState, msg *dns.Msg) err
 			}
 		}
 	}
-	var clientIPStr string = "-"
+	clientIPStr := "-"
 	if pluginsState.clientProto == "udp" {
 		clientIPStr = (*pluginsState.clientAddr).(*net.UDPAddr).IP.String()
 	} else {
