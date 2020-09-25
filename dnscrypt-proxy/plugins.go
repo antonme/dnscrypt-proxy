@@ -114,6 +114,9 @@ func (proxy *Proxy) InitPluginsGlobals() error {
 
 	*queryPlugins = append(*queryPlugins, Plugin(new(PluginFirefox)))
 
+	if len(proxy.ednsClientSubnets) != 0 {
+		*queryPlugins = append(*queryPlugins, Plugin(new(PluginECS)))
+	}
 	if len(proxy.blockNameFile) != 0 {
 		*queryPlugins = append(*queryPlugins, Plugin(new(PluginBlockName)))
 	}
@@ -299,6 +302,7 @@ func (pluginsState *PluginsState) ApplyQueryPlugins(pluginsGlobals *PluginsGloba
 			break
 		}
 	}
+
 	packet2, err := msg.PackBuffer(packet)
 	if err != nil {
 		return packet, err

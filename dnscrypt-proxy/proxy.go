@@ -91,6 +91,7 @@ type Proxy struct {
 	anonDirectCertFallback         bool
 	dns64Prefixes                  []string
 	dns64Resolvers                 []string
+	ednsClientSubnets              []*net.IPNet
 }
 
 func (proxy *Proxy) registerUDPListener(conn *net.UDPConn) {
