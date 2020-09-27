@@ -143,7 +143,7 @@ func (app *App) AppMain() {
 func (app *App) Stop(service service.Service) error {
 	PidFileRemove()
 
-	if app.proxy.cachePersistent {
+	if app.proxy.cachePersistent == true {
 		err := cachedResponses.SaveCache(app.proxy.cacheFilename)
 		if err != nil {
 			dlog.Fatalf("Can't save cached responses to a file: %s", err)
