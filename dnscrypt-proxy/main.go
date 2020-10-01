@@ -141,6 +141,9 @@ func (app *App) AppMain() {
 }
 
 func (app *App) Stop(service service.Service) error {
+	PidFileRemove()
+	dlog.Notice("Stopped.")
+
 	if app.proxy.cachePersistent == true {
 		err := cachedResponses.SaveCache(app.proxy.cacheFilename)
 		if err != nil {
@@ -148,7 +151,5 @@ func (app *App) Stop(service service.Service) error {
 		}
 	}
 
-	PidFileRemove()
-	dlog.Notice("Stopped.")
 	return nil
 }
