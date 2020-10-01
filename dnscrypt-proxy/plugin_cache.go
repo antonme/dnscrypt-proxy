@@ -120,13 +120,11 @@ func (cachedResponses *CachedResponses) LoadCache(cacheFilename string, cacheSiz
 			}
 		}
 
+		var savedResponse SavedResponse
+		var msg dns.Msg
+
 		i := 0
 		for {
-			var savedResponse SavedResponse
-			var msg dns.Msg
-
-			dlog.Debugf("== Loading %d response of %d =====================", i+1, header.ItemsCount)
-
 			err = dec.Decode(&savedResponse)
 			if err != nil {
 				if err == io.EOF {
@@ -146,20 +144,12 @@ func (cachedResponses *CachedResponses) LoadCache(cacheFilename string, cacheSiz
 				msg:        msg,
 			}
 
-			if startTime.Before(cachedResponse.expiration) {
-				updateTTL(&msg, cachedResponse.expiration)
-			}
-			//cachedKey := 16
 			cachedKey := computeCacheKey(nil, &msg)
 			cachedResponses.cache.Add(cachedKey, cachedResponse)
 
 			if savedResponse.Frequent {
-				dlog.Debugf("Question is [%s], frequent, expiration date: %s (TTL: %d)", msg.Question[0].Name, savedResponse.Expiration, savedResponse.Expiration.Sub(time.Now())/time.Second)
-				cachedResponses.cache.Add(cachedKey, cachedResponse)
-			} else {
-				dlog.Debugf("Question is [%s], non frequent, expiration date: %s (TTL: %d)", msg.Question[0].Name, savedResponse.Expiration, savedResponse.Expiration.Sub(time.Now())/time.Second)
+				cachedResponses.cache.Get(cachedKey)
 			}
-
 		}
 		dlog.Infof("Loaded %d/%d cached responses in %s", i, header.ItemsCount, time.Now().Sub(startTime))
 
@@ -178,6 +168,8 @@ func (cachedResponses *CachedResponses) SaveCache(cacheFilename string) (err err
 		var cacheSave bytes.Buffer
 
 		dlog.Noticef("Preparing to save %d cached responses", cachedResponses.cache.Len())
+
+		//fileBuf:= bufio.NewWriter(&cacheSave)
 
 		enc := gob.NewEncoder(&cacheSave)
 
@@ -208,7 +200,7 @@ func (cachedResponses *CachedResponses) SaveCache(cacheFilename string) (err err
 			cachedAny, _ := cachedResponses.cache.Peek(cacheKey)
 			cached := cachedAny.(CachedResponse)
 			msg := cached.msg
-			//msg.Compress = true
+			msg.Compress = false //Speed more important than space
 
 			_, valueExist := cachedResponses.fetchLock[cacheKey]
 
@@ -222,16 +214,14 @@ func (cachedResponses *CachedResponses) SaveCache(cacheFilename string) (err err
 
 			err = enc.Encode(&savedResponse)
 			if err != nil {
-				dlog.Warnf("Error while saving response to [%s]", msg.Question[0].Name)
 				return err
 			}
-			//cachedResponses.cache.Remove(cacheKey)
 		}
 
 		dlog.Infof("Saving cached responses (prepared in %s)", time.Now().Sub(startTime))
 		saveFile, _ := os.Create(cacheFilename)
 		defer saveFile.Close()
-
+		//fileBuf.Flush()
 		_, err = saveFile.Write(cacheSave.Bytes())
 		if err != nil {
 			return err
@@ -324,12 +314,7 @@ func (plugin *PluginCacheResponse) Description() string {
 }
 
 func (plugin *PluginCacheResponse) Init(proxy *Proxy) error {
-	if proxy != nil && proxy.cachePersistent {
-		err := cachedResponses.LoadCache(proxy.cacheFilename, proxy.cacheSize)
-		if err != nil {
-			dlog.Warnf("Can't load cache from [%s]: %s", proxy.cacheFilename, err)
-		}
-	}
+
 	return nil
 }
 
@@ -377,7 +362,6 @@ func (plugin *PluginCacheResponse) Eval(pluginsState *PluginsState, msg *dns.Msg
 		var err error
 		cachedResponses.cache, err = lru.NewARC(pluginsState.cacheSize)
 		cachedResponses.fetchLock = make(map[[32]byte]bool)
-
 		if err != nil {
 			cachedResponses.Unlock()
 			return err
