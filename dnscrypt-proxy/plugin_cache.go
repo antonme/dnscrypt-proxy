@@ -180,12 +180,6 @@ func (cachedResponses *CachedResponses) SaveCache(cacheFilename string) (err err
 		defer saveFile.Close()
 
 		saveBuf := bufio.NewWriter(saveFile)
-		defer func() {
-			ferr := saveBuf.Flush()
-			if ferr != nil {
-				err = ferr
-			}
-		}()
 
 		enc := gob.NewEncoder(saveBuf)
 
@@ -203,14 +197,11 @@ func (cachedResponses *CachedResponses) SaveCache(cacheFilename string) (err err
 			Links:            []string{"https://github.com/antonme/dnscrypt-proxy-home", "https://github.com/DNSCrypt/dnscrypt-proxy"},
 		}
 
-		cachedResponses.RLock()
-		defer cachedResponses.RUnlock()
-
 		err = jenc.Encode(header)
 		if err != nil {
 			return err
 		}
-
+		var packet []byte
 		keys := cachedResponses.cache.Keys()
 		for keyNum := range keys {
 			cacheKey := keys[keyNum].([32]byte)
@@ -218,11 +209,11 @@ func (cachedResponses *CachedResponses) SaveCache(cacheFilename string) (err err
 			cachedAny, _ := cachedResponses.cache.Peek(cacheKey)
 			cached := cachedAny.(CachedResponse)
 			msg := cached.msg
-			msg.Compress = true
+			//msg.Compress = true
 
 			_, valueExist := cachedResponses.fetchLock[cacheKey]
 
-			packet, _ := msg.PackBuffer(nil)
+			packet, _ = msg.PackBuffer(packet)
 
 			savedResponse := SavedResponse{
 				Expiration: cached.expiration,
@@ -232,11 +223,22 @@ func (cachedResponses *CachedResponses) SaveCache(cacheFilename string) (err err
 
 			err = enc.Encode(&savedResponse)
 			if err != nil {
+				dlog.Warnf("Error while saving response to [%s]", msg.Question[0].Name)
 				return err
 			}
 			dlog.Debug(cached.msg.Question)
 			dlog.Debug(cached.expiration)
 
+			if keyNum%10000 == 0 {
+				err := saveBuf.Flush()
+				if err != nil {
+					return err
+				}
+			}
+		}
+		err := saveBuf.Flush()
+		if err != nil {
+			return err
 		}
 	} else {
 		dlog.Notice("No cache to save")
