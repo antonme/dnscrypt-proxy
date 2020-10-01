@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"crypto/sha512"
 	"encoding/binary"
 	"encoding/gob"
@@ -174,16 +175,13 @@ func (cachedResponses *CachedResponses) SaveCache(cacheFilename string) (err err
 
 	if cachedResponses.cache != nil && cachedResponses.cache.Len() > 0 {
 
-		dlog.Noticef("Saving %d cached responses", cachedResponses.cache.Len())
+		var cacheSave bytes.Buffer
 
-		saveFile, _ := os.Create(cacheFilename)
-		defer saveFile.Close()
+		dlog.Noticef("Preparing to save %d cached responses", cachedResponses.cache.Len())
 
-		saveBuf := bufio.NewWriter(saveFile)
+		enc := gob.NewEncoder(&cacheSave)
 
-		enc := gob.NewEncoder(saveBuf)
-
-		jenc := json.NewEncoder(saveBuf)
+		jenc := json.NewEncoder(&cacheSave)
 
 		header := CacheFileHeader{
 			AppName:          "dnscrypt-proxy-home",
@@ -202,6 +200,7 @@ func (cachedResponses *CachedResponses) SaveCache(cacheFilename string) (err err
 			return err
 		}
 		var packet []byte
+
 		keys := cachedResponses.cache.Keys()
 		for keyNum := range keys {
 			cacheKey := keys[keyNum].([32]byte)
@@ -226,17 +225,14 @@ func (cachedResponses *CachedResponses) SaveCache(cacheFilename string) (err err
 				dlog.Warnf("Error while saving response to [%s]", msg.Question[0].Name)
 				return err
 			}
-			dlog.Debug(cached.msg.Question)
-			dlog.Debug(cached.expiration)
-
-			if keyNum%10000 == 0 {
-				err := saveBuf.Flush()
-				if err != nil {
-					return err
-				}
-			}
+			//cachedResponses.cache.Remove(cacheKey)
 		}
-		err := saveBuf.Flush()
+
+		dlog.Infof("Saving cached responses (prepared in %s)", time.Now().Sub(startTime))
+		saveFile, _ := os.Create(cacheFilename)
+		defer saveFile.Close()
+
+		_, err = saveFile.Write(cacheSave.Bytes())
 		if err != nil {
 			return err
 		}
