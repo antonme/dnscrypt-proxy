@@ -107,7 +107,6 @@ func (cachedResponses *CachedResponses) LoadCache(cacheFilename string, cacheSiz
 		dec := gob.NewDecoder(reader)
 
 		cachedResponses.Lock()
-		defer cachedResponses.Unlock()
 
 		if cachedResponses.cache == nil {
 
@@ -115,11 +114,10 @@ func (cachedResponses *CachedResponses) LoadCache(cacheFilename string, cacheSiz
 			cachedResponses.fetchLock = make(map[[32]byte]bool)
 
 			if err != nil {
-				cachedResponses.Unlock()
 				return err
 			}
 		}
-
+		cachedResponses.Unlock()
 		var savedResponse SavedResponse
 		var msg dns.Msg
 
@@ -145,11 +143,12 @@ func (cachedResponses *CachedResponses) LoadCache(cacheFilename string, cacheSiz
 			}
 
 			cachedKey := computeCacheKey(nil, &msg)
+			cachedResponses.Lock()
 			cachedResponses.cache.Add(cachedKey, cachedResponse)
-
 			if savedResponse.Frequent {
 				cachedResponses.cache.Get(cachedKey)
 			}
+			cachedResponses.Unlock()
 		}
 		dlog.Infof("Loaded %d/%d cached responses in %s", i, header.ItemsCount, time.Now().Sub(startTime))
 

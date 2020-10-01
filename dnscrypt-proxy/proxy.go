@@ -227,12 +227,7 @@ func (proxy *Proxy) StartProxy() {
 	}
 	proxy.startAcceptingClients()
 	liveServers, err := proxy.serversInfo.refresh(proxy)
-	if proxy.cachePersistent {
-		err := cachedResponses.LoadCache(proxy.cacheFilename, proxy.cacheSize)
-		if err != nil {
-			dlog.Warnf("Can't load cache from [%s]: %s", proxy.cacheFilename, err)
-		}
-	}
+
 	if liveServers > 0 {
 		proxy.certIgnoreTimestamp = false
 	}
@@ -244,6 +239,12 @@ func (proxy *Proxy) StartProxy() {
 		if !proxy.child {
 			if err := ServiceManagerReadyNotify(); err != nil {
 				dlog.Fatal(err)
+			}
+		}
+		if liveServers > 0 && proxy.cachePersistent {
+			err := cachedResponses.LoadCache(proxy.cacheFilename, proxy.cacheSize)
+			if err != nil {
+				dlog.Warnf("Can't load cache from [%s]: %s", proxy.cacheFilename, err)
 			}
 		}
 	} else if err != nil {
