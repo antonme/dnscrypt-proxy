@@ -1,8 +1,26 @@
 
-BEGIN			{subcolor  = "\033[2m";
-				 basecolor = "\033[0m"}
+BEGIN			{
+                    subcolor  = "\033[2m";
+				    basecolor = "\033[0m";
+                }
 
-				 {print $4 |& cmd; if(( cmd |& getline result )>0) {split (result,arr," ");subname=arr[1];basename=arr[2]}}
+				{
+                     print $4 |& cmd; 
+                     
+                     if(( cmd |& getline result )>0) 
+                     {
+                         if (split (result,arr,"\t")>1)
+                         {
+                             subname=arr[1];
+                             basename=arr[2]
+                         }
+                         else 
+                         {
+                             subname=""
+                             basename=result
+                         }
+                     }
+                }
 
 
 			{if(length(subname""basename)>=40)subname=substr(subname,0,length(subname)-(length(subname""basename)-36))"~."}

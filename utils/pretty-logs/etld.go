@@ -13,6 +13,6 @@ func main() {
 	for scanner.Scan() {
 		domain := scanner.Text()
 		suffix, _ := publicsuffix.DomainFromListWithOptions(publicsuffix.DefaultList, domain, &publicsuffix.FindOptions{IgnorePrivate: true, DefaultRule: publicsuffix.DefaultRule})
-		fmt.Printf("%s %s\n", domain[:len(domain)-len(suffix)], suffix)
+		fmt.Printf("%s\t%s\n", domain[:len(domain)-len(suffix)], suffix)
 	}
 }
