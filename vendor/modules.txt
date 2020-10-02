@@ -45,6 +45,8 @@ github.com/jedisct1/go-minisign
 # github.com/jedisct1/xsecretbox v0.0.0-20200921000858-23f5ec706e6a
 ## explicit
 github.com/jedisct1/xsecretbox
+# github.com/joeguo/tldextract v0.0.0-20180214020933-b623e0574407
+## explicit
 # github.com/k-sone/critbitgo v1.4.0
 ## explicit
 github.com/k-sone/critbitgo
@@ -64,6 +66,9 @@ github.com/powerman/check
 # github.com/smartystreets/goconvey v1.6.4
 github.com/smartystreets/goconvey/convey/gotest
 github.com/smartystreets/goconvey/convey/reporting
+# github.com/weppos/publicsuffix-go v0.13.0
+## explicit
+github.com/weppos/publicsuffix-go/publicsuffix
 # golang.org/x/crypto v0.0.0-20200820211705-5c72a883971a
 ## explicit
 golang.org/x/crypto/blake2b
