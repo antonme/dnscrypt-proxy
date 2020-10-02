@@ -357,6 +357,8 @@ cache_persistent = true
 
 cache_filename = '/Users/anton/dev/dnscrypt-proxy.cache'
 
+cache_extra_filenames = ['/Users/anton/dev/dnscrypt-proxy.258k.cache', '/Users/anton/dev/dnscrypt-proxy.cache.bak']
+
 ## Flush one query out of local DNS cache by sending a request like flush@query
 ## for example 'dig flush@bbc.co.uk AAAA' removes AAAA record for bbc.co.uk
 

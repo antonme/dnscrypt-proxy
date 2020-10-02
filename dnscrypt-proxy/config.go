@@ -54,6 +54,7 @@ type Config struct {
 	CacheForced              bool                        `toml:"cache_forced"`
 	CachePersistent          bool                        `toml:"cache_persistent"`
 	CacheFilename            string                      `toml:"cache_filename"`
+	ExtraCacheFiles          []string                    `toml:"cache_extra_filenames"`
 	CacheFlushEnabled        bool                        `toml:"cache_flush_command"`
 	CacheSize                int                         `toml:"cache_size"`
 	CacheNegTTL              uint32                      `toml:"cache_neg_ttl"`
@@ -452,6 +453,7 @@ func ConfigLoad(proxy *Proxy, flags *ConfigFlags) error {
 
 	proxy.cache = config.Cache
 	proxy.cacheFilename = config.CacheFilename
+	proxy.extraCacheFiles = config.ExtraCacheFiles
 	proxy.cacheForced = config.CacheForced
 	proxy.cachePersistent = config.CachePersistent
 	proxy.cacheSize = config.CacheSize

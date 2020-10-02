@@ -58,6 +58,7 @@ type Proxy struct {
 	queryLogFormat                 string
 	queryLogIgnoredQtypes          []string
 	cacheFilename                  string
+	extraCacheFiles                []string
 	nxLogFile                      string
 	nxLogFormat                    string
 	blockNameFile                  string
@@ -241,12 +242,19 @@ func (proxy *Proxy) StartProxy() {
 				dlog.Fatal(err)
 			}
 		}
-		if liveServers > 0 && proxy.cachePersistent {
-			err := cachedResponses.LoadCache(proxy.cacheFilename, proxy.cacheSize)
+		if proxy.cachePersistent {
+			err := cachedResponses.LoadCache(proxy, proxy.cacheFilename)
 			if err != nil {
 				dlog.Warnf("Can't load cache from [%s]: %s", proxy.cacheFilename, err)
 			}
+			for filenum := range proxy.extraCacheFiles {
+				err := cachedResponses.LoadCache(proxy, proxy.extraCacheFiles[filenum])
+				if err != nil {
+					dlog.Warnf("Can't load cache from [%s]: %s", proxy.cacheFilename, err)
+				}
+			}
 		}
+
 	} else if err != nil {
 		dlog.Error(err)
 		dlog.Notice("dnscrypt-proxy-home is waiting for at least one server to be reachable")

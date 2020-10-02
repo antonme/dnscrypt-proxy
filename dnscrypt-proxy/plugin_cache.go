@@ -79,7 +79,7 @@ type CacheFileHeader struct {
 	Links            []string  `json:"links"`
 }
 
-func (cachedResponses *CachedResponses) LoadCache(cacheFilename string, cacheSize int) error {
+func (cachedResponses *CachedResponses) LoadCache(proxy *Proxy, cacheFilename string) error {
 	startTime := time.Now()
 	loadFile, err := os.Open(cacheFilename)
 	if err != nil {
@@ -102,7 +102,7 @@ func (cachedResponses *CachedResponses) LoadCache(cacheFilename string, cacheSiz
 	}
 
 	if header.ItemsCount > 0 {
-		dlog.Noticef("Loading %d cached responses from [%s]", header.ItemsCount, cacheFilename)
+		dlog.Noticef("Loading %d cached responses from [%s]", header.ItemsCount, proxy.cacheFilename)
 
 		dec := gob.NewDecoder(reader)
 
@@ -110,7 +110,7 @@ func (cachedResponses *CachedResponses) LoadCache(cacheFilename string, cacheSiz
 
 		if cachedResponses.cache == nil {
 
-			cachedResponses.cache, err = lru.NewARC(cacheSize)
+			cachedResponses.cache, err = lru.NewARC(proxy.cacheSize)
 			cachedResponses.fetchLock = make(map[[32]byte]bool)
 
 			if err != nil {
@@ -130,7 +130,6 @@ func (cachedResponses *CachedResponses) LoadCache(cacheFilename string, cacheSiz
 				}
 				return err
 			}
-			i++
 
 			err = msg.Unpack(savedResponse.Packet)
 			if err != nil {
@@ -144,9 +143,13 @@ func (cachedResponses *CachedResponses) LoadCache(cacheFilename string, cacheSiz
 
 			cachedKey := computeCacheKey(nil, &msg)
 			cachedResponses.Lock()
-			cachedResponses.cache.Add(cachedKey, cachedResponse)
-			if savedResponse.Frequent {
-				cachedResponses.cache.Get(cachedKey)
+
+			if (proxy.cacheForced || cachedResponse.expiration.After(startTime)) && !cachedResponses.cache.Contains(cachedKey) {
+				cachedResponses.cache.Add(cachedKey, cachedResponse)
+				if savedResponse.Frequent {
+					cachedResponses.cache.Get(cachedKey)
+				}
+				i++
 			}
 			cachedResponses.Unlock()
 		}
@@ -199,7 +202,7 @@ func (cachedResponses *CachedResponses) SaveCache(cacheFilename string) (err err
 			cachedAny, _ := cachedResponses.cache.Peek(cacheKey)
 			cached := cachedAny.(CachedResponse)
 			msg := cached.msg
-			msg.Compress = false //Speed more important than space
+			//msg.Compress = false //Speed more important than space
 
 			_, valueExist := cachedResponses.fetchLock[cacheKey]
 
@@ -217,7 +220,7 @@ func (cachedResponses *CachedResponses) SaveCache(cacheFilename string) (err err
 			}
 		}
 
-		dlog.Infof("Saving cached responses (prepared in %s)", time.Now().Sub(startTime))
+		//dlog.Infof("Saving cached responses (prepared in %s)", time.Now().Sub(startTime))
 		saveFile, _ := os.Create(cacheFilename)
 		defer saveFile.Close()
 		//fileBuf.Flush()
