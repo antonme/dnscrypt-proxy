@@ -1,4 +1,3 @@
-
 ##############################################
 #                                            #
 #        dnscrypt-proxy configuration        #
@@ -346,21 +345,54 @@ cache = true
 cache_size = 262144
 
 
-## Use forced cache (always answer fast from cache, even if it is expired, then renew it)
+## Use forced cache (always answer fast from the cache, even if it is expired, then renew it)
+## default = false
 
 cache_forced = true
 
 
-## Save cache to a file
+## When even forced cache should expire (0 = never, default value)
+## Important note: this one starts counting *after* normal expiration
+##
+##      There's exist cache_forced_max_ttl        (seconds)
+##                    cache_forced_max_ttl_hours
+##                    cache_forced_max_ttl_days
+##
+## If more than one is used, sum of them will be used as a value
 
+# cache_forced_max_ttl = 0
+
+
+## Save cache to a file
+## default = false
 cache_persistent = true
 
+## To which file should app save the cache to and load from on start
 cache_filename = '/Users/anton/dev/dnscrypt-proxy.cache'
+
+
+## Extra cache files to load cache from on start. Useful for a cache sync between different servers.
+## Never will be overwritten by the app, cache will only be saved to cache_filename.
 
 cache_extra_filenames = ['/Users/anton/dev/dnscrypt-proxy.258k.cache', '/Users/anton/dev/dnscrypt-proxy.cache.bak']
 
+
+
+## How often shall dnscrypt-proxy save the cache automatically (in seconds, 0 = never, default is every hour)
+##
+##      There's exist cache_autosave_period           (seconds)
+##                    cache_autosave_period_minutes
+##                    cache_autosave_period_hours
+##
+## If more than one is used, sum of them will be used as a value
+
+# cache_autosave_period_hours = 1
+
+
+
 ## Flush one query out of local DNS cache by sending a request like flush@query
 ## for example 'dig flush@bbc.co.uk AAAA' removes AAAA record for bbc.co.uk
+## Might be a but dangerous in a public places, default = false
 
 cache_flush_command = true
 
@@ -425,20 +457,20 @@ cert_key_file = '/Users/anton/dev/localhost.pem'
 
 [query_log]
 
-  ## Path to the query log file (absolute, or relative to the same directory as the config file)
-  ## Can be set to /dev/stdout in order to log to the standard output.
+## Path to the query log file (absolute, or relative to the same directory as the config file)
+## Can be set to /dev/stdout in order to log to the standard output.
 
-  file = '/Users/anton/dev/query.log'
-
-
-  ## Query log format (currently supported: tsv and ltsv)
-
-  format = 'tsv'
+file = '/Users/anton/dev/query.log'
 
 
-  ## Do not log these query types, to reduce verbosity. Keep empty to log everything.
+## Query log format (currently supported: tsv and ltsv)
 
-  # ignored_qtypes = ['DNSKEY', 'NS']
+format = 'tsv'
+
+
+## Do not log these query types, to reduce verbosity. Keep empty to log everything.
+
+# ignored_qtypes = ['DNSKEY', 'NS']
 
 
 
@@ -452,14 +484,14 @@ cert_key_file = '/Users/anton/dev/localhost.pem'
 
 [nx_log]
 
-  ## Path to the query log file (absolute, or relative to the same directory as the config file)
+## Path to the query log file (absolute, or relative to the same directory as the config file)
 
-  file = '/Users/anton/dev/nx.log'
+file = '/Users/anton/dev/nx.log'
 
 
-  ## Query log format (currently supported: tsv and ltsv)
+## Query log format (currently supported: tsv and ltsv)
 
-  format = 'tsv'
+format = 'tsv'
 
 
 
@@ -482,18 +514,18 @@ cert_key_file = '/Users/anton/dev/localhost.pem'
 
 [blocked_names]
 
-  ## Path to the file of blocking rules (absolute, or relative to the same directory as the config file)
+## Path to the file of blocking rules (absolute, or relative to the same directory as the config file)
 
 blocked_names_file = '/Users/anton/dev/dnscrypt-proxy/blocked-names.txt'
 
 
-  ## Optional path to a file logging blocked queries
-  log_file = '/Users/anton/dev/blocked-names.log'
+## Optional path to a file logging blocked queries
+log_file = '/Users/anton/dev/blocked-names.log'
 
 
-  ## Optional log format: tsv or ltsv (default: tsv)
+## Optional log format: tsv or ltsv (default: tsv)
 
-  # log_format = 'tsv'
+# log_format = 'tsv'
 
 
 
@@ -509,19 +541,19 @@ blocked_names_file = '/Users/anton/dev/dnscrypt-proxy/blocked-names.txt'
 
 [blocked_ips]
 
-  ## Path to the file of blocking rules (absolute, or relative to the same directory as the config file)
+## Path to the file of blocking rules (absolute, or relative to the same directory as the config file)
 
-  # blocked_ips_file = 'blocked-ips.txt'
-
-
-  ## Optional path to a file logging blocked queries
-
-  # log_file = 'blocked-ips.log'
+# blocked_ips_file = 'blocked-ips.txt'
 
 
-  ## Optional log format: tsv or ltsv (default: tsv)
+## Optional path to a file logging blocked queries
 
-  # log_format = 'tsv'
+# log_file = 'blocked-ips.log'
+
+
+## Optional log format: tsv or ltsv (default: tsv)
+
+# log_format = 'tsv'
 
 
 
@@ -537,19 +569,19 @@ blocked_names_file = '/Users/anton/dev/dnscrypt-proxy/blocked-names.txt'
 
 [allowed_names]
 
-  ## Path to the file of allow list rules (absolute, or relative to the same directory as the config file)
+## Path to the file of allow list rules (absolute, or relative to the same directory as the config file)
 
-  # allowed_names_file = 'allowed-names.txt'
-
-
-  ## Optional path to a file logging allowed queries
-
-  # log_file = 'allowed-names.log'
+# allowed_names_file = 'allowed-names.txt'
 
 
-  ## Optional log format: tsv or ltsv (default: tsv)
+## Optional path to a file logging allowed queries
 
-  # log_format = 'tsv'
+# log_file = 'allowed-names.log'
+
+
+## Optional log format: tsv or ltsv (default: tsv)
+
+# log_format = 'tsv'
 
 
 
@@ -570,21 +602,21 @@ blocked_names_file = '/Users/anton/dev/dnscrypt-proxy/blocked-names.txt'
 
 [schedules]
 
-  # [schedules.'time-to-sleep']
-  # mon = [{after='21:00', before='7:00'}]
-  # tue = [{after='21:00', before='7:00'}]
-  # wed = [{after='21:00', before='7:00'}]
-  # thu = [{after='21:00', before='7:00'}]
-  # fri = [{after='23:00', before='7:00'}]
-  # sat = [{after='23:00', before='7:00'}]
-  # sun = [{after='21:00', before='7:00'}]
+# [schedules.'time-to-sleep']
+# mon = [{after='21:00', before='7:00'}]
+# tue = [{after='21:00', before='7:00'}]
+# wed = [{after='21:00', before='7:00'}]
+# thu = [{after='21:00', before='7:00'}]
+# fri = [{after='23:00', before='7:00'}]
+# sat = [{after='23:00', before='7:00'}]
+# sun = [{after='21:00', before='7:00'}]
 
-  # [schedules.'work']
-  # mon = [{after='9:00', before='18:00'}]
-  # tue = [{after='9:00', before='18:00'}]
-  # wed = [{after='9:00', before='18:00'}]
-  # thu = [{after='9:00', before='18:00'}]
-  # fri = [{after='9:00', before='17:00'}]
+# [schedules.'work']
+# mon = [{after='9:00', before='18:00'}]
+# tue = [{after='9:00', before='18:00'}]
+# wed = [{after='9:00', before='18:00'}]
+# thu = [{after='9:00', before='18:00'}]
+# fri = [{after='9:00', before='17:00'}]
 
 
 
@@ -609,24 +641,24 @@ blocked_names_file = '/Users/anton/dev/dnscrypt-proxy/blocked-names.txt'
 
 [sources]
 
-  ## An example of a remote source from https://github.com/DNSCrypt/dnscrypt-resolvers
+## An example of a remote source from https://github.com/DNSCrypt/dnscrypt-resolvers
 
-  [sources.'public-resolvers']
-  urls = ['https://raw.githubusercontent.com/DNSCrypt/dnscrypt-resolvers/master/v3/public-resolvers.md', 'https://download.dnscrypt.info/resolvers-list/v3/public-resolvers.md']
-  cache_file = 'public.md'
-  minisign_key = 'RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3'
-  prefix = ''
+[sources.'public-resolvers']
+urls = ['https://raw.githubusercontent.com/DNSCrypt/dnscrypt-resolvers/master/v3/public-resolvers.md', 'https://download.dnscrypt.info/resolvers-list/v3/public-resolvers.md']
+cache_file = 'public.md'
+minisign_key = 'RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3'
+prefix = ''
 
-  ## Anonymized DNS relays
+## Anonymized DNS relays
 
-  [sources.'relays']
-  urls = ['https://raw.githubusercontent.com/DNSCrypt/dnscrypt-resolvers/master/v3/relays.md', 'https://download.dnscrypt.info/resolvers-list/v3/relays.md']
-  cache_file = 'relays.md'
-  minisign_key = 'RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3'
-  refresh_delay = 72
-  prefix = ''
+[sources.'relays']
+urls = ['https://raw.githubusercontent.com/DNSCrypt/dnscrypt-resolvers/master/v3/relays.md', 'https://download.dnscrypt.info/resolvers-list/v3/relays.md']
+cache_file = 'relays.md'
+minisign_key = 'RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3'
+refresh_delay = 72
+prefix = ''
 
-  ## Quad9 over DNSCrypt - https://quad9.net/
+## Quad9 over DNSCrypt - https://quad9.net/
 
 #   [sources.quad9-resolvers]
 #   urls = ['https://www.quad9.net/quad9-resolvers.md']
@@ -634,13 +666,13 @@ blocked_names_file = '/Users/anton/dev/dnscrypt-proxy/blocked-names.txt'
 #   cache_file = 'quad9-resolvers.md'
 #   prefix = 'quad9-'
 
-  ## Another example source, with resolvers censoring some websites not appropriate for children
-  ## This is a subset of the `public-resolvers` list, so enabling both is useless
+## Another example source, with resolvers censoring some websites not appropriate for children
+## This is a subset of the `public-resolvers` list, so enabling both is useless
 
-  #  [sources.'parental-control']
-  #  urls = ['https://raw.githubusercontent.com/DNSCrypt/dnscrypt-resolvers/master/v3/parental-control.md', 'https://download.dnscrypt.info/resolvers-list/v3/parental-control.md']
-  #  cache_file = 'parental-control.md'
-  #  minisign_key = 'RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3'
+#  [sources.'parental-control']
+#  urls = ['https://raw.githubusercontent.com/DNSCrypt/dnscrypt-resolvers/master/v3/parental-control.md', 'https://download.dnscrypt.info/resolvers-list/v3/parental-control.md']
+#  cache_file = 'parental-control.md'
+#  minisign_key = 'RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3'
 
 
 
@@ -717,9 +749,9 @@ fragments_blocked = ['cisco', 'cisco-ipv6', 'cisco-familyshield', 'cisco-familys
 # ]
 
 routes = [
-  { server_name='yandex',     via=['anon-cs-se','anon-scaleway','anon-skyfighter'] },
-  { server_name='meganerd',   via=['anon-cs-nl2', 'anon-cs-se']},
-  { server_name='*',          via=['anon-cs-nl2']}
+    { server_name = 'yandex', via = ['anon-cs-se', 'anon-scaleway', 'anon-skyfighter'] },
+    { server_name = 'meganerd', via = ['anon-cs-nl2', 'anon-cs-se'] },
+    { server_name = '*', via = ['anon-cs-nl2'] }
 ]
 
 
@@ -778,5 +810,5 @@ skip_incompatible = true
 
 [static]
 
-  # [static.'myserver']
-  # stamp = 'sdns://AQcAAAAAAAAAAAAQMi5kbnNjcnlwdC1jZXJ0Lg'
+# [static.'myserver']
+# stamp = 'sdns://AQcAAAAAAAAAAAAQMi5kbnNjcnlwdC1jZXJ0Lg'

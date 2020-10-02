@@ -55,6 +55,9 @@ type Config struct {
 	CachePersistent          bool                        `toml:"cache_persistent"`
 	CacheFilename            string                      `toml:"cache_filename"`
 	ExtraCacheFiles          []string                    `toml:"cache_extra_filenames"`
+	CacheAutoSave            uint32                      `toml:"cache_autosave_interval"`
+	CacheAutoSaveMinutes     uint32                      `toml:"cache_autosave_interval_minutes"`
+	CacheAutoSaveHours       uint32                      `toml:"cache_autosave_interval_hours"`
 	CacheFlushEnabled        bool                        `toml:"cache_flush_command"`
 	CacheSize                int                         `toml:"cache_size"`
 	CacheNegTTL              uint32                      `toml:"cache_neg_ttl"`
@@ -62,6 +65,9 @@ type Config struct {
 	CacheNegMaxTTL           uint32                      `toml:"cache_neg_max_ttl"`
 	CacheMinTTL              uint32                      `toml:"cache_min_ttl"`
 	CacheMaxTTL              uint32                      `toml:"cache_max_ttl"`
+	CacheForcedMaxTTL        uint32                      `toml:"cache_forced_max_ttl"`
+	CacheForcedMaxTTLHours   uint32                      `toml:"cache_forced_max_ttl_hours"`
+	CacheForcedMaxTTLDays    uint32                      `toml:"cache_forced_max_ttl_days"`
 	RejectTTL                uint32                      `toml:"reject_ttl"`
 	CloakTTL                 uint32                      `toml:"cloak_ttl"`
 	QueryLog                 QueryLogConfig              `toml:"query_log"`
@@ -123,12 +129,18 @@ func newConfig() Config {
 		Cache:                    true,
 		CacheForced:              false,
 		CachePersistent:          true,
+		CacheAutoSave:            3600,
+		CacheAutoSaveMinutes:     0,
+		CacheAutoSaveHours:       0,
 		CacheSize:                512,
 		CacheNegTTL:              0,
 		CacheNegMinTTL:           60,
 		CacheNegMaxTTL:           600,
 		CacheMinTTL:              60,
 		CacheMaxTTL:              86400,
+		CacheForcedMaxTTL:        0,
+		CacheForcedMaxTTLHours:   0,
+		CacheForcedMaxTTLDays:    0,
 		RejectTTL:                600,
 		CloakTTL:                 600,
 		SourceRequireNoLog:       true,
@@ -458,6 +470,8 @@ func ConfigLoad(proxy *Proxy, flags *ConfigFlags) error {
 	proxy.cachePersistent = config.CachePersistent
 	proxy.cacheSize = config.CacheSize
 	proxy.cacheFlushEnabled = config.CacheFlushEnabled
+	proxy.cacheAutoSave = time.Duration(config.CacheAutoSave) * time.Second
+	proxy.cacheForcedMaxTTL = time.Duration(config.CacheForcedMaxTTL)*time.Second + time.Duration(config.CacheForcedMaxTTLHours)*time.Hour + time.Duration(config.CacheForcedMaxTTLDays)*time.Hour*24
 
 	if config.CacheNegTTL > 0 {
 		proxy.cacheNegMinTTL = config.CacheNegTTL

@@ -102,7 +102,7 @@ func (cachedResponses *CachedResponses) LoadCache(proxy *Proxy, cacheFilename st
 	}
 
 	if header.ItemsCount > 0 {
-		dlog.Noticef("Loading %d cached responses from [%s]", header.ItemsCount, proxy.cacheFilename)
+		dlog.Noticef("Loading %d cached responses from [%s]", header.ItemsCount, cacheFilename)
 
 		dec := gob.NewDecoder(reader)
 
@@ -141,17 +141,24 @@ func (cachedResponses *CachedResponses) LoadCache(proxy *Proxy, cacheFilename st
 				msg:        msg,
 			}
 
-			cachedKey := computeCacheKey(nil, &msg)
-			cachedResponses.Lock()
+			if cachedResponse.expiration.After(startTime) || proxy.cacheForced {
 
-			if (proxy.cacheForced || cachedResponse.expiration.After(startTime)) && !cachedResponses.cache.Contains(cachedKey) {
-				cachedResponses.cache.Add(cachedKey, cachedResponse)
-				if savedResponse.Frequent {
-					cachedResponses.cache.Get(cachedKey)
+				if proxy.cacheForcedMaxTTL > 0 && cachedResponse.expiration.Add(proxy.cacheForcedMaxTTL).Before(startTime) {
+					continue
 				}
-				i++
+
+				cachedKey := computeCacheKey(nil, &msg)
+				cachedResponses.Lock()
+				if !cachedResponses.cache.Contains(cachedKey) {
+					cachedResponses.cache.Add(cachedKey, cachedResponse)
+					if savedResponse.Frequent {
+						cachedResponses.cache.Get(cachedKey)
+					}
+					i++
+				}
+				cachedResponses.Unlock()
 			}
-			cachedResponses.Unlock()
+
 		}
 		dlog.Infof("Loaded %d/%d cached responses in %s", i, header.ItemsCount, time.Now().Sub(startTime))
 
@@ -171,11 +178,7 @@ func (cachedResponses *CachedResponses) SaveCache(cacheFilename string) (err err
 
 		dlog.Noticef("Preparing to save %d cached responses", cachedResponses.cache.Len())
 
-		//fileBuf:= bufio.NewWriter(&cacheSave)
-
 		enc := gob.NewEncoder(&cacheSave)
-
-		jenc := json.NewEncoder(&cacheSave)
 
 		header := CacheFileHeader{
 			AppName:          "dnscrypt-proxy-home",
@@ -189,10 +192,6 @@ func (cachedResponses *CachedResponses) SaveCache(cacheFilename string) (err err
 			Links:            []string{"https://github.com/antonme/dnscrypt-proxy-home", "https://github.com/DNSCrypt/dnscrypt-proxy"},
 		}
 
-		err = jenc.Encode(header)
-		if err != nil {
-			return err
-		}
 		var packet []byte
 
 		keys := cachedResponses.cache.Keys()
@@ -220,16 +219,22 @@ func (cachedResponses *CachedResponses) SaveCache(cacheFilename string) (err err
 			}
 		}
 
-		//dlog.Infof("Saving cached responses (prepared in %s)", time.Now().Sub(startTime))
 		saveFile, _ := os.Create(cacheFilename)
 		defer saveFile.Close()
-		//fileBuf.Flush()
+
+		jenc := json.NewEncoder(saveFile)
+		err = jenc.Encode(header)
+		if err != nil {
+			return err
+		}
+
 		_, err = saveFile.Write(cacheSave.Bytes())
 		if err != nil {
 			return err
 		}
 	} else {
 		dlog.Notice("No cache to save")
+		return nil
 	}
 
 	dlog.Infof("Time spent saving: %s", time.Now().Sub(startTime))
@@ -290,8 +295,14 @@ func (plugin *PluginCache) Eval(pluginsState *PluginsState, msg *dns.Msg) error 
 			pluginsState.sessionData["stale"] = &synth
 			return nil
 		}
+		timeSpend := time.Now().Sub(cached.expiration)
+		if pluginsState.cacheForcedMaxTTL > 0 && timeSpend > pluginsState.cacheForcedMaxTTL {
+			pluginsState.sessionData["stale"] = &synth
+			return nil
+		}
 		pluginsState.forceRequest = true
 	}
+
 	updateTTL(&cached.msg, cached.expiration)
 
 	pluginsState.synthResponse = &synth

@@ -48,10 +48,12 @@ type Proxy struct {
 	cacheForced                    bool
 	cacheFlushEnabled              bool
 	cachePersistent                bool
+	cacheAutoSave                  time.Duration
 	cacheNegMinTTL                 uint32
 	cacheNegMaxTTL                 uint32
 	cacheMinTTL                    uint32
 	cacheMaxTTL                    uint32
+	cacheForcedMaxTTL              time.Duration
 	rejectTTL                      uint32
 	cloakTTL                       uint32
 	queryLogFile                   string
@@ -277,6 +279,15 @@ func (proxy *Proxy) StartProxy() {
 				if liveServers > 0 {
 					proxy.certIgnoreTimestamp = false
 				}
+				runtime.GC()
+			}
+		}()
+	}
+	if proxy.cachePersistent && proxy.cacheAutoSave > 0 && len(proxy.serversInfo.registeredServers) > 0 {
+		go func() {
+			for {
+				clocksmith.Sleep(proxy.cacheAutoSave)
+				cachedResponses.SaveCache(proxy.cacheFilename)
 				runtime.GC()
 			}
 		}()
