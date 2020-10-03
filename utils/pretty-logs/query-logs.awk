@@ -1,8 +1,7 @@
-
 BEGIN			{
                     subcolor  = "\033[2m";
-				    basecolor = "\033[0m";
-                }
+				            basecolor = "\033[0m";
+          }
 
 				{
                      print $4 |& cmd; 
@@ -20,12 +19,12 @@ BEGIN			{
                              basename=result
                          }
                      }
-                }
 
+                    if (length(subname""basename)>38)
+                    subname=substr(subname,0,length(subname)-(length(subname""basename)-36))"~."
+        }
 
-			{if(length(subname""basename)>=40)subname=substr(subname,0,length(subname)-(length(subname""basename)-36))"~."}
-
-{color="0m"}
+                {color="0m"}
 /CACHE_HIT/     {color="32m"}
 /FORCED_CACHE/  {color="38;5;36m"}
 /FETCH/         {color="38;5;75m"}
@@ -47,5 +46,7 @@ ms<30           {mscolor="32m"}
 ms<=2           {mscolor="32m\033[2m"}
 
 
-{printf("%-23.23s] %-15s %50.50s   %-6s \033["color"%15s\033[0m \033["mscolor"%8s\033[0m %7d %17.15s\n",$1" "$2,$3,subcolor""subname""basecolor""basename"\033[0m",$5,$6,$7,$8,$9)}
-
+{
+  printf("%-23.23s] %-15s %50.50s   %-6s \033["color"%15s\033[0m \033["mscolor"%8s\033[0m %7d %17.15s\n",\
+                                $1" "$2,$3,subcolor""subname""basecolor""basename"\033[0m",$5,$6,$7,$8,$9)
+}
