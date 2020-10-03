@@ -373,6 +373,60 @@ cache_neg_min_ttl = 60
 cache_neg_max_ttl = 600
 
 
+## Use forced cache (always answer fast from the cache, even if it is expired, then renew it)
+## Useful with big caches and not-too big load situations (like home)
+## default = false
+
+# cache_forced = true
+
+
+## When even forced cache should expire (0 = never, default value)
+## Important note: this one starts counting *after* normal expiration
+##
+##      There's exist cache_forced_max_ttl        (seconds)
+##                    cache_forced_max_ttl_hours
+##                    cache_forced_max_ttl_days
+##
+## If more than one is used, sum of them will be used as a value
+
+# cache_forced_max_ttl_days = 7
+
+
+## Save cache to a file on exit, load on start
+## default = false
+
+# cache_persistent = true
+
+## To which file should app save the cache to and load from on start
+
+# cache_filename = 'dnscrypt-proxy.cache'
+
+
+## Extra cache files to load cache from on start. Useful for a cache sync between different servers.
+## Never will be overwritten by the app, cache will only be saved to cache_filename.
+
+# cache_extra_filenames = [ 'dnscrypt.server2.cache', 'dnscrypt.server3.cache' ]
+
+
+## How often shall dnscrypt-proxy save the cache automatically
+##  (0 = never, default is every hour)
+##
+##      There's exist cache_autosave_period           (seconds)
+##                    cache_autosave_period_minutes
+##                    cache_autosave_period_hours
+##
+## If more than one is used, sum of them will be used as a value
+
+# cache_autosave_period_hours = 1
+
+
+
+## Flush one query out of local DNS cache by sending a request like flush@query
+## for example 'dig flush@bbc.co.uk AAAA' removes AAAA record for bbc.co.uk
+## Might be a but dangerous in a public places, default = false
+
+# cache_flush_command = true
+
 
 ##################################
 #        Local DoH server        #
